@@ -53,10 +53,11 @@ export default function Home() {
         }
 
         .weather-greeting {
-          font-size: 13px;
-          color: var(--text-secondary);
-          font-weight: 400;
-          letter-spacing: 0.01em;
+          font-size: 18px;
+          color: var(--text-primary);
+          font-weight: 300;
+          letter-spacing: -0.01em;
+          opacity: 0.92;
         }
 
         .clock-block {
