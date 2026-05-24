@@ -1,4 +1,5 @@
 import Clock from "./components/Clock";
+import WeatherGreeting from "./components/WeatherGreeting";
 import Dashboard from "./components/Dashboard";
 
 export default function Home() {
@@ -6,7 +7,10 @@ export default function Home() {
     <main className="main">
       <header className="header">
         <div className="greeting-block">
-          <h1 className="greeting">Hello, Alex.</h1>
+          <div className="greeting-left">
+            <h1 className="greeting">Hello, Alex.</h1>
+            <WeatherGreeting />
+          </div>
           <Clock />
         </div>
         <div className="header-rule" />
@@ -35,6 +39,12 @@ export default function Home() {
           flex-wrap: wrap;
         }
 
+        .greeting-left {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
         .greeting {
           font-size: clamp(28px, 5vw, 48px);
           font-weight: 300;
@@ -42,18 +52,18 @@ export default function Home() {
           color: var(--text-primary);
         }
 
+        .weather-greeting {
+          font-size: 13px;
+          color: var(--text-secondary);
+          font-weight: 400;
+          letter-spacing: 0.01em;
+        }
+
         .clock-block {
           display: flex;
           flex-direction: column;
           align-items: flex-end;
           gap: 2px;
-        }
-
-        .clock-date {
-          font-size: 11px;
-          color: var(--text-secondary);
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
         }
 
         .clock-time {
