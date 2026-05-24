@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import brainSrc from "../../public/brain.png";
 
 export default function Splash() {
   const [open, setOpen] = useState(false);
@@ -44,13 +46,13 @@ export default function Splash() {
   return (
     <div className="splash">
       <div className="splash-content">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           className="brain"
-          src="/brain.png"
+          src={brainSrc}
           alt="Brain"
           width={200}
           height={200}
+          priority
         />
 
         {open && (
