@@ -16,4 +16,14 @@ export default defineSchema({
     name: v.string(),
     order: v.number(),
   }),
+  printJobs: defineTable({
+    status: v.union(v.literal("not-started"), v.literal("in-progress"), v.literal("done")),
+    descriptor: v.string(),
+    product: v.string(),
+    customer: v.string(),
+    produce: v.optional(v.string()),
+    shipDate: v.optional(v.string()),
+    shipBy: v.optional(v.string()),
+    order: v.number(),
+  }),
 });
