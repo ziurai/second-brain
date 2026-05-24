@@ -1,15 +1,16 @@
 "use client";
 import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 import {
-  Link2, FileText, StickyNote, Layout,
-  Plus, X, ExternalLink, Edit3, Trash2,
-  Globe, File, AlignLeft, Monitor, Save
+  Plus, X, Trash2, Globe, File, AlignLeft, Monitor, Save
 } from "lucide-react";
 
 type ResourceType = "link" | "file" | "note" | "embed";
 
 interface Resource {
-  id: string;
+  _id: Id<"resources">;
   type: ResourceType;
   label: string;
   url?: string;
@@ -17,6 +18,7 @@ interface Resource {
   content?: string;
   embedUrl?: string;
   category: string;
+  order: number;
 }
 
 const TYPE_ICONS: Record<ResourceType, React.ReactNode> = {
@@ -33,52 +35,59 @@ const TYPE_COLORS: Record<ResourceType, string> = {
   embed: "#c4b5fd",
 };
 
-const INITIAL_RESOURCES: Resource[] = [
-  { id: "1", type: "link", label: "GitHub", url: "https://github.com", category: "Dev" },
-  { id: "2", type: "link", label: "Vercel", url: "https://vercel.com", category: "Dev" },
-  { id: "3", type: "link", label: "Linear", url: "https://linear.app", category: "Dev" },
-  { id: "4", type: "link", label: "Figma", url: "https://figma.com", category: "Design" },
-  { id: "5", type: "file", label: "Resume.pdf", filePath: "/files/resume.pdf", category: "Docs" },
-  { id: "6", type: "file", label: "Budget.xlsx", filePath: "/files/budget.xlsx", category: "Docs" },
-  { id: "7", type: "note", label: "Daily Standup", content: "- What did I do yesterday?\n- What am I doing today?\n- Any blockers?", category: "Notes" },
-  { id: "8", type: "embed", label: "Weather", embedUrl: "https://wttr.in/?format=3", category: "Widgets" },
-  { id: "9", type: "link", label: "Claude", url: "https://claude.ai", category: "AI" },
-  { id: "10", type: "link", label: "ChatGPT", url: "https://chatgpt.com", category: "AI" },
-];
-
-const CATEGORIES = ["All", "Dev", "Design", "Docs", "Notes", "AI", "Widgets"];
-
 export default function Dashboard() {
-  const [resources, setResources] = useState<Resource[]>(INITIAL_RESOURCES);
+  const resources = useQuery(api.resources.list) ?? [];
+  const categories = useQuery(api.categories.list) ?? [];
+
+  const addResource = useMutation(api.resources.add);
+  const removeResource = useMutation(api.resources.remove);
+  const addCategory = useMutation(api.categories.add);
+  const removeCategory = useMutation(api.categories.remove);
+
   const [activeCategory, setActiveCategory] = useState("All");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddCategory, setShowAddCategory] = useState(false);
   const [expandedNote, setExpandedNote] = useState<Resource | null>(null);
   const [expandedEmbed, setExpandedEmbed] = useState<Resource | null>(null);
-  const [newResource, setNewResource] = useState<Partial<Resource>>({ type: "link", category: "Dev" });
+  const [newResource, setNewResource] = useState<Partial<Resource & { type: ResourceType }>>({ type: "link", category: "" });
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  const categoryNames = ["All", ...categories.map(c => c.name)];
 
   const filtered = activeCategory === "All"
     ? resources
     : resources.filter(r => r.category === activeCategory);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newResource.label) return;
-    const resource: Resource = {
-      id: Date.now().toString(),
+    await addResource({
       type: newResource.type as ResourceType,
       label: newResource.label,
       url: newResource.url,
       filePath: newResource.filePath,
       content: newResource.content,
       embedUrl: newResource.embedUrl,
-      category: newResource.category || "Dev",
-    };
-    setResources(prev => [...prev, resource]);
-    setNewResource({ type: "link", category: "Dev" });
+      category: newResource.category || "General",
+      order: resources.length,
+    });
+    setNewResource({ type: "link", category: "" });
     setShowAddModal(false);
   };
 
-  const handleDelete = (id: string) => {
-    setResources(prev => prev.filter(r => r.id !== id));
+  const handleDelete = async (id: Id<"resources">) => {
+    await removeResource({ id });
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    await addCategory({ name: newCategoryName.trim(), order: categories.length });
+    setNewCategoryName("");
+    setShowAddCategory(false);
+  };
+
+  const handleDeleteCategory = async (id: Id<"categories">, name: string) => {
+    await removeCategory({ id });
+    if (activeCategory === name) setActiveCategory("All");
   };
 
   const handleClick = (r: Resource) => {
@@ -90,17 +99,46 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      {/* Category filter */}
+      {/* Category nav */}
       <nav className="category-nav">
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat}
-            className={`cat-btn ${activeCategory === cat ? "active" : ""}`}
-            onClick={() => setActiveCategory(cat)}
-          >
-            {cat}
-          </button>
+        {categoryNames.map(cat => (
+          <div key={cat} className="cat-wrapper">
+            <button
+              className={`cat-btn ${activeCategory === cat ? "active" : ""}`}
+              onClick={() => setActiveCategory(cat)}
+            >
+              {cat}
+            </button>
+            {cat !== "All" && (
+              <button
+                className="cat-delete"
+                onClick={() => {
+                  const found = categories.find(c => c.name === cat);
+                  if (found) handleDeleteCategory(found._id, cat);
+                }}
+              >
+                <X size={9} />
+              </button>
+            )}
+          </div>
         ))}
+        {showAddCategory ? (
+          <div className="inline-cat-form">
+            <input
+              autoFocus
+              placeholder="Category name"
+              value={newCategoryName}
+              onChange={e => setNewCategoryName(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleAddCategory(); if (e.key === "Escape") setShowAddCategory(false); }}
+            />
+            <button onClick={handleAddCategory}><Save size={12} /></button>
+            <button onClick={() => setShowAddCategory(false)}><X size={12} /></button>
+          </div>
+        ) : (
+          <button className="cat-btn ghost" onClick={() => setShowAddCategory(true)}>
+            <Plus size={11} /> Category
+          </button>
+        )}
         <button className="add-btn" onClick={() => setShowAddModal(true)}>
           <Plus size={14} /> Add
         </button>
@@ -109,16 +147,13 @@ export default function Dashboard() {
       {/* Resource grid */}
       <div className="resource-grid">
         {filtered.map(r => (
-          <div key={r.id} className="resource-card" onClick={() => handleClick(r)}>
+          <div key={r._id} className="resource-card" onClick={() => handleClick(r)}>
             <div className="card-header">
               <span className="type-badge" style={{ color: TYPE_COLORS[r.type] }}>
                 {TYPE_ICONS[r.type]}
                 <span>{r.type}</span>
               </span>
-              <button
-                className="delete-btn"
-                onClick={e => { e.stopPropagation(); handleDelete(r.id); }}
-              >
+              <button className="delete-btn" onClick={e => { e.stopPropagation(); handleDelete(r._id); }}>
                 <Trash2 size={11} />
               </button>
             </div>
@@ -132,6 +167,13 @@ export default function Dashboard() {
             <div className="card-category">{r.category}</div>
           </div>
         ))}
+
+        {filtered.length === 0 && (
+          <div className="empty-state">
+            No resources in {activeCategory === "All" ? "your brain" : activeCategory} yet.
+            <button onClick={() => setShowAddModal(true)}>Add one →</button>
+          </div>
+        )}
       </div>
 
       {/* Note Modal */}
@@ -191,7 +233,7 @@ export default function Dashboard() {
                   onChange={e => setNewResource(p => ({ ...p, label: e.target.value }))}
                 />
               </div>
-              {(newResource.type === "link") && (
+              {newResource.type === "link" && (
                 <div className="form-row">
                   <label>URL</label>
                   <input
@@ -201,7 +243,7 @@ export default function Dashboard() {
                   />
                 </div>
               )}
-              {(newResource.type === "file") && (
+              {newResource.type === "file" && (
                 <div className="form-row">
                   <label>File Path</label>
                   <input
@@ -211,7 +253,7 @@ export default function Dashboard() {
                   />
                 </div>
               )}
-              {(newResource.type === "note") && (
+              {newResource.type === "note" && (
                 <div className="form-row">
                   <label>Content</label>
                   <textarea
@@ -222,7 +264,7 @@ export default function Dashboard() {
                   />
                 </div>
               )}
-              {(newResource.type === "embed") && (
+              {newResource.type === "embed" && (
                 <div className="form-row">
                   <label>Embed URL</label>
                   <input
@@ -234,11 +276,15 @@ export default function Dashboard() {
               )}
               <div className="form-row">
                 <label>Category</label>
-                <input
-                  placeholder="Dev, Design, Docs..."
+                <select
                   value={newResource.category || ""}
                   onChange={e => setNewResource(p => ({ ...p, category: e.target.value }))}
-                />
+                >
+                  <option value="">Select a category</option>
+                  {categories.map(c => (
+                    <option key={c._id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
               </div>
               <button className="submit-btn" onClick={handleAdd}>
                 <Save size={13} /> Save Resource
@@ -259,6 +305,32 @@ export default function Dashboard() {
           align-items: center;
         }
 
+        .cat-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .cat-delete {
+          position: absolute;
+          top: -5px;
+          right: -5px;
+          background: #1a1a1a;
+          border: 1px solid var(--border);
+          color: var(--text-muted);
+          border-radius: 50%;
+          width: 14px;
+          height: 14px;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          padding: 0;
+          z-index: 1;
+        }
+        .cat-wrapper:hover .cat-delete { display: flex; }
+        .cat-delete:hover { color: #f87171; border-color: #f87171; }
+
         .cat-btn {
           background: none;
           border: 1px solid var(--border);
@@ -274,6 +346,37 @@ export default function Dashboard() {
         }
         .cat-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
         .cat-btn.active { border-color: var(--accent); color: var(--accent); background: #ffffff08; }
+        .cat-btn.ghost { color: var(--text-muted); border-style: dashed; display: flex; align-items: center; gap: 4px; }
+        .cat-btn.ghost:hover { color: var(--text-secondary); border-color: var(--border-hover); }
+
+        .inline-cat-form {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .inline-cat-form input {
+          background: var(--bg);
+          border: 1px solid var(--border-hover);
+          color: var(--text-primary);
+          padding: 4px 8px;
+          border-radius: 3px;
+          font-family: inherit;
+          font-size: 11px;
+          outline: none;
+          width: 120px;
+        }
+        .inline-cat-form button {
+          background: none;
+          border: 1px solid var(--border);
+          color: var(--text-secondary);
+          padding: 4px;
+          border-radius: 3px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          transition: all 0.15s;
+        }
+        .inline-cat-form button:hover { color: var(--text-primary); border-color: var(--border-hover); }
 
         .add-btn {
           margin-left: auto;
@@ -374,7 +477,26 @@ export default function Dashboard() {
           margin-top: 2px;
         }
 
-        /* Modals */
+        .empty-state {
+          grid-column: 1 / -1;
+          color: var(--text-muted);
+          font-size: 12px;
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          padding: 40px 0;
+        }
+        .empty-state button {
+          background: none;
+          border: none;
+          color: var(--text-secondary);
+          cursor: pointer;
+          font-family: inherit;
+          font-size: 12px;
+          transition: color 0.15s;
+        }
+        .empty-state button:hover { color: var(--text-primary); }
+
         .modal-overlay {
           position: fixed;
           inset: 0;
@@ -434,12 +556,10 @@ export default function Dashboard() {
           background: var(--bg);
         }
 
-        /* Form */
         .form { padding: 20px 18px; display: flex; flex-direction: column; gap: 16px; }
-
         .form-row { display: flex; flex-direction: column; gap: 6px; }
         .form-row label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
-        .form-row input, .form-row textarea {
+        .form-row input, .form-row textarea, .form-row select {
           background: var(--bg);
           border: 1px solid var(--border);
           color: var(--text-primary);
@@ -451,7 +571,8 @@ export default function Dashboard() {
           transition: border-color 0.15s;
           resize: vertical;
         }
-        .form-row input:focus, .form-row textarea:focus { border-color: var(--border-hover); }
+        .form-row select option { background: #141414; }
+        .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--border-hover); }
 
         .type-selector { display: flex; gap: 6px; flex-wrap: wrap; }
         .type-btn {
