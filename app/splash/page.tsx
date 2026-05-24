@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 export default function Splash() {
   const [open, setOpen] = useState(false);
@@ -45,13 +44,13 @@ export default function Splash() {
   return (
     <div className="splash">
       <div className="splash-content">
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           className="brain"
           src="/brain.png"
           alt="Brain"
           width={200}
           height={200}
-          priority
         />
 
         {open && (
@@ -89,6 +88,9 @@ export default function Splash() {
           gap: 48px;
         }
         .brain {
+          width: 200px;
+          height: 200px;
+          object-fit: contain;
           opacity: 0.9;
         }
         .login-form {
