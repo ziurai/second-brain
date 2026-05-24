@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import {
-  Plus, X, Trash2, Globe, File, AlignLeft, Monitor, Save
+  Plus, X, Trash2, Globe, File, AlignLeft, Monitor, Save, Pencil
 } from "lucide-react";
 
 type ResourceType = "link" | "file" | "note" | "embed";
@@ -41,6 +41,7 @@ export default function Dashboard() {
 
   const addResource = useMutation(api.resources.add);
   const removeResource = useMutation(api.resources.remove);
+  const updateResource = useMutation(api.resources.update);
   const addCategory = useMutation(api.categories.add);
   const removeCategory = useMutation(api.categories.remove);
 
@@ -49,6 +50,8 @@ export default function Dashboard() {
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [expandedNote, setExpandedNote] = useState<Resource | null>(null);
   const [expandedEmbed, setExpandedEmbed] = useState<Resource | null>(null);
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [editFields, setEditFields] = useState<Partial<Resource>>({});
   const [newResource, setNewResource] = useState<Partial<Resource & { type: ResourceType }>>({ type: "link", category: "" });
   const [newCategoryName, setNewCategoryName] = useState("");
 
@@ -78,6 +81,29 @@ export default function Dashboard() {
     await removeResource({ id });
   };
 
+  const handleEdit = (r: Resource, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingResource(r);
+    setEditFields({
+      label: r.label,
+      url: r.url,
+      filePath: r.filePath,
+      content: r.content,
+      embedUrl: r.embedUrl,
+      category: r.category,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingResource) return;
+    await updateResource({
+      id: editingResource._id,
+      ...editFields,
+    });
+    setEditingResource(null);
+    setEditFields({});
+  };
+
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
     await addCategory({ name: newCategoryName.trim(), order: categories.length });
@@ -99,7 +125,6 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      {/* Category nav */}
       <nav className="category-nav">
         {categoryNames.map(cat => (
           <div key={cat} className="cat-wrapper">
@@ -144,7 +169,6 @@ export default function Dashboard() {
         </button>
       </nav>
 
-      {/* Resource grid */}
       <div className="resource-grid">
         {filtered.map(r => (
           <div key={r._id} className="resource-card" onClick={() => handleClick(r)}>
@@ -153,9 +177,14 @@ export default function Dashboard() {
                 {TYPE_ICONS[r.type]}
                 <span>{r.type}</span>
               </span>
-              <button className="delete-btn" onClick={e => { e.stopPropagation(); handleDelete(r._id); }}>
-                <Trash2 size={11} />
-              </button>
+              <div className="card-actions">
+                <button className="action-btn" onClick={e => handleEdit(r, e)}>
+                  <Pencil size={11} />
+                </button>
+                <button className="action-btn delete" onClick={e => { e.stopPropagation(); handleDelete(r._id); }}>
+                  <Trash2 size={11} />
+                </button>
+              </div>
             </div>
             <div className="card-label">{r.label}</div>
             <div className="card-meta">
@@ -176,7 +205,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Note Modal */}
       {expandedNote && (
         <div className="modal-overlay" onClick={() => setExpandedNote(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -189,7 +217,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Embed Modal */}
       {expandedEmbed && (
         <div className="modal-overlay" onClick={() => setExpandedEmbed(null)}>
           <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
@@ -202,7 +229,77 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Add Resource Modal */}
+      {editingResource && (
+        <div className="modal-overlay" onClick={() => setEditingResource(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span>Edit Resource</span>
+              <button onClick={() => setEditingResource(null)}><X size={16} /></button>
+            </div>
+            <div className="form">
+              <div className="form-row">
+                <label>Label</label>
+                <input
+                  value={editFields.label || ""}
+                  onChange={e => setEditFields(p => ({ ...p, label: e.target.value }))}
+                />
+              </div>
+              {editingResource.type === "link" && (
+                <div className="form-row">
+                  <label>URL</label>
+                  <input
+                    value={editFields.url || ""}
+                    onChange={e => setEditFields(p => ({ ...p, url: e.target.value }))}
+                  />
+                </div>
+              )}
+              {editingResource.type === "file" && (
+                <div className="form-row">
+                  <label>File Path</label>
+                  <input
+                    value={editFields.filePath || ""}
+                    onChange={e => setEditFields(p => ({ ...p, filePath: e.target.value }))}
+                  />
+                </div>
+              )}
+              {editingResource.type === "note" && (
+                <div className="form-row">
+                  <label>Content</label>
+                  <textarea
+                    value={editFields.content || ""}
+                    onChange={e => setEditFields(p => ({ ...p, content: e.target.value }))}
+                    rows={6}
+                  />
+                </div>
+              )}
+              {editingResource.type === "embed" && (
+                <div className="form-row">
+                  <label>Embed URL</label>
+                  <input
+                    value={editFields.embedUrl || ""}
+                    onChange={e => setEditFields(p => ({ ...p, embedUrl: e.target.value }))}
+                  />
+                </div>
+              )}
+              <div className="form-row">
+                <label>Category</label>
+                <select
+                  value={editFields.category || ""}
+                  onChange={e => setEditFields(p => ({ ...p, category: e.target.value }))}
+                >
+                  {categories.map(c => (
+                    <option key={c._id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button className="submit-btn" onClick={handleSaveEdit}>
+                <Save size={13} /> Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddModal && (
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -296,314 +393,58 @@ export default function Dashboard() {
 
       <style>{`
         .dashboard { padding: 0 0 60px; }
-
-        .category-nav {
-          display: flex;
-          gap: 4px;
-          margin-bottom: 32px;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-
-        .cat-wrapper {
-          position: relative;
-          display: flex;
-          align-items: center;
-        }
-
-        .cat-delete {
-          position: absolute;
-          top: -5px;
-          right: -5px;
-          background: #1a1a1a;
-          border: 1px solid var(--border);
-          color: var(--text-muted);
-          border-radius: 50%;
-          width: 14px;
-          height: 14px;
-          display: none;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          padding: 0;
-          z-index: 1;
-        }
+        .category-nav { display: flex; gap: 4px; margin-bottom: 32px; flex-wrap: wrap; align-items: center; }
+        .cat-wrapper { position: relative; display: flex; align-items: center; }
+        .cat-delete { position: absolute; top: -5px; right: -5px; background: #1a1a1a; border: 1px solid var(--border); color: var(--text-muted); border-radius: 50%; width: 14px; height: 14px; display: none; align-items: center; justify-content: center; cursor: pointer; padding: 0; z-index: 1; }
         .cat-wrapper:hover .cat-delete { display: flex; }
         .cat-delete:hover { color: #f87171; border-color: #f87171; }
-
-        .cat-btn {
-          background: none;
-          border: 1px solid var(--border);
-          color: var(--text-secondary);
-          padding: 5px 14px;
-          border-radius: 3px;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 11px;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          transition: all 0.15s;
-        }
+        .cat-btn { background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 5px 14px; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; transition: all 0.15s; }
         .cat-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
         .cat-btn.active { border-color: var(--accent); color: var(--accent); background: #ffffff08; }
         .cat-btn.ghost { color: var(--text-muted); border-style: dashed; display: flex; align-items: center; gap: 4px; }
         .cat-btn.ghost:hover { color: var(--text-secondary); border-color: var(--border-hover); }
-
-        .inline-cat-form {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-        .inline-cat-form input {
-          background: var(--bg);
-          border: 1px solid var(--border-hover);
-          color: var(--text-primary);
-          padding: 4px 8px;
-          border-radius: 3px;
-          font-family: inherit;
-          font-size: 11px;
-          outline: none;
-          width: 120px;
-        }
-        .inline-cat-form button {
-          background: none;
-          border: 1px solid var(--border);
-          color: var(--text-secondary);
-          padding: 4px;
-          border-radius: 3px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          transition: all 0.15s;
-        }
+        .inline-cat-form { display: flex; align-items: center; gap: 4px; }
+        .inline-cat-form input { background: var(--bg); border: 1px solid var(--border-hover); color: var(--text-primary); padding: 4px 8px; border-radius: 3px; font-family: inherit; font-size: 11px; outline: none; width: 120px; }
+        .inline-cat-form button { background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 4px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; transition: all 0.15s; }
         .inline-cat-form button:hover { color: var(--text-primary); border-color: var(--border-hover); }
-
-        .add-btn {
-          margin-left: auto;
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          background: #ffffff0a;
-          border: 1px solid var(--border);
-          color: var(--text-secondary);
-          padding: 5px 14px;
-          border-radius: 3px;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 11px;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          transition: all 0.15s;
-        }
+        .add-btn { margin-left: auto; display: flex; align-items: center; gap: 5px; background: #ffffff0a; border: 1px solid var(--border); color: var(--text-secondary); padding: 5px 14px; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; transition: all 0.15s; }
         .add-btn:hover { border-color: var(--border-hover); color: var(--text-primary); background: #ffffff14; }
-
-        .resource-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 12px;
-        }
-
-        .resource-card {
-          background: var(--bg-card);
-          border: 1px solid var(--border);
-          border-radius: 4px;
-          padding: 14px 16px;
-          cursor: pointer;
-          transition: all 0.15s;
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-        .resource-card:hover {
-          border-color: var(--border-hover);
-          background: var(--bg-card-hover);
-          transform: translateY(-1px);
-        }
-
-        .card-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .type-badge {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 10px;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          opacity: 0.8;
-        }
-
-        .delete-btn {
-          background: none;
-          border: none;
-          color: var(--text-muted);
-          cursor: pointer;
-          padding: 2px;
-          opacity: 0;
-          transition: opacity 0.15s, color 0.15s;
-          display: flex;
-          align-items: center;
-        }
-        .resource-card:hover .delete-btn { opacity: 1; }
-        .delete-btn:hover { color: #f87171; }
-
-        .card-label {
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--text-primary);
-          letter-spacing: -0.01em;
-        }
-
-        .card-url {
-          font-size: 10px;
-          color: var(--text-muted);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          display: block;
-        }
-
+        .resource-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        .resource-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 14px 16px; cursor: pointer; transition: all 0.15s; position: relative; display: flex; flex-direction: column; gap: 6px; }
+        .resource-card:hover { border-color: var(--border-hover); background: var(--bg-card-hover); transform: translateY(-1px); }
+        .card-header { display: flex; align-items: center; justify-content: space-between; }
+        .type-badge { display: flex; align-items: center; gap: 4px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+        .card-actions { display: flex; align-items: center; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+        .resource-card:hover .card-actions { opacity: 1; }
+        .action-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; display: flex; align-items: center; transition: color 0.15s; }
+        .action-btn:hover { color: var(--text-secondary); }
+        .action-btn.delete:hover { color: #f87171; }
+        .card-label { font-size: 14px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.01em; }
+        .card-url { font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
         .card-meta { overflow: hidden; }
-
-        .card-category {
-          font-size: 9px;
-          color: var(--accent-dim);
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          margin-top: 2px;
-        }
-
-        .empty-state {
-          grid-column: 1 / -1;
-          color: var(--text-muted);
-          font-size: 12px;
-          display: flex;
-          gap: 12px;
-          align-items: center;
-          padding: 40px 0;
-        }
-        .empty-state button {
-          background: none;
-          border: none;
-          color: var(--text-secondary);
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 12px;
-          transition: color 0.15s;
-        }
+        .card-category { font-size: 9px; color: var(--accent-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+        .empty-state { grid-column: 1 / -1; color: var(--text-muted); font-size: 12px; display: flex; gap: 12px; align-items: center; padding: 40px 0; }
+        .empty-state button { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-family: inherit; font-size: 12px; transition: color 0.15s; }
         .empty-state button:hover { color: var(--text-primary); }
-
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: #00000088;
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 100;
-          padding: 20px;
-        }
-
-        .modal {
-          background: #141414;
-          border: 1px solid var(--border-hover);
-          border-radius: 6px;
-          width: 100%;
-          max-width: 480px;
-          overflow: hidden;
-        }
-
+        .modal-overlay { position: fixed; inset: 0; background: #00000088; backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+        .modal { background: #141414; border: 1px solid var(--border-hover); border-radius: 6px; width: 100%; max-width: 480px; overflow: hidden; }
         .modal-wide { max-width: 720px; }
-
-        .modal-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 14px 18px;
-          border-bottom: 1px solid var(--border);
-          font-size: 12px;
-          letter-spacing: 0.05em;
-          color: var(--text-secondary);
-        }
-        .modal-header button {
-          background: none; border: none; color: var(--text-secondary);
-          cursor: pointer; display: flex; align-items: center;
-          transition: color 0.15s;
-        }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 12px; letter-spacing: 0.05em; color: var(--text-secondary); }
+        .modal-header button { background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; transition: color 0.15s; }
         .modal-header button:hover { color: var(--text-primary); }
-
-        .note-content {
-          padding: 20px 18px;
-          font-family: inherit;
-          font-size: 13px;
-          color: var(--text-primary);
-          line-height: 1.7;
-          white-space: pre-wrap;
-          max-height: 400px;
-          overflow-y: auto;
-        }
-
-        .embed-frame {
-          width: 100%;
-          height: 480px;
-          border: none;
-          display: block;
-          background: var(--bg);
-        }
-
+        .note-content { padding: 20px 18px; font-family: inherit; font-size: 13px; color: var(--text-primary); line-height: 1.7; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        .embed-frame { width: 100%; height: 480px; border: none; display: block; background: var(--bg); }
         .form { padding: 20px 18px; display: flex; flex-direction: column; gap: 16px; }
         .form-row { display: flex; flex-direction: column; gap: 6px; }
         .form-row label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
-        .form-row input, .form-row textarea, .form-row select {
-          background: var(--bg);
-          border: 1px solid var(--border);
-          color: var(--text-primary);
-          padding: 8px 10px;
-          border-radius: 3px;
-          font-family: inherit;
-          font-size: 12px;
-          outline: none;
-          transition: border-color 0.15s;
-          resize: vertical;
-        }
+        .form-row input, .form-row textarea, .form-row select { background: var(--bg); border: 1px solid var(--border); color: var(--text-primary); padding: 8px 10px; border-radius: 3px; font-family: inherit; font-size: 12px; outline: none; transition: border-color 0.15s; resize: vertical; }
         .form-row select option { background: #141414; }
         .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--border-hover); }
-
         .type-selector { display: flex; gap: 6px; flex-wrap: wrap; }
-        .type-btn {
-          display: flex; align-items: center; gap: 5px;
-          background: none;
-          border: 1px solid var(--border);
-          color: var(--text-secondary);
-          padding: 5px 10px;
-          border-radius: 3px;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 11px;
-          transition: all 0.15s;
-          text-transform: capitalize;
-        }
+        .type-btn { display: flex; align-items: center; gap: 5px; background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 5px 10px; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 11px; transition: all 0.15s; text-transform: capitalize; }
         .type-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
         .type-btn.active { border-color: var(--accent); color: var(--accent); background: #ffffff08; }
-
-        .submit-btn {
-          display: flex; align-items: center; gap: 6px; justify-content: center;
-          background: #ffffff0f;
-          border: 1px solid var(--border-hover);
-          color: var(--text-primary);
-          padding: 9px 16px;
-          border-radius: 3px;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 12px;
-          letter-spacing: 0.05em;
-          transition: all 0.15s;
-        }
+        .submit-btn { display: flex; align-items: center; gap: 6px; justify-content: center; background: #ffffff0f; border: 1px solid var(--border-hover); color: var(--text-primary); padding: 9px 16px; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 12px; letter-spacing: 0.05em; transition: all 0.15s; }
         .submit-btn:hover { background: #ffffff18; }
       `}</style>
     </div>
