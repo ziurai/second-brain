@@ -125,7 +125,11 @@ export default function Dashboard() {
       } else if (href.startsWith("/")) {
         href = "openlocal://" + href;
       }
-      window.location.href = href;
+      const a = document.createElement("a");
+      a.href = href;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
     if (r.type === "note") setExpandedNote(r);
     if (r.type === "embed") setExpandedEmbed(r);
