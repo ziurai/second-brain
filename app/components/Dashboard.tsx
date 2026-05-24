@@ -118,7 +118,15 @@ export default function Dashboard() {
 
   const handleClick = (r: Resource) => {
     if (r.type === "link" && r.url) window.open(r.url, "_blank");
-    if (r.type === "file" && r.filePath) window.open(r.filePath, "_blank");
+    if (r.type === "file" && r.filePath) {
+      let href = r.filePath;
+      if (href.startsWith("file://")) {
+        href = "openlocal://" + href.slice("file://".length);
+      } else if (href.startsWith("/")) {
+        href = "openlocal://" + href;
+      }
+      window.location.href = href;
+    }
     if (r.type === "note") setExpandedNote(r);
     if (r.type === "embed") setExpandedEmbed(r);
   };
@@ -344,7 +352,7 @@ export default function Dashboard() {
                 <div className="form-row">
                   <label>File Path</label>
                   <input
-                    placeholder="/files/document.pdf"
+                    placeholder="file:///Users/you/Documents/file.html"
                     value={newResource.filePath || ""}
                     onChange={e => setNewResource(p => ({ ...p, filePath: e.target.value }))}
                   />
