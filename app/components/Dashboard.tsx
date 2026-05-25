@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import {
-  Plus, X, Trash2, Globe, File, AlignLeft, Monitor, Save, Pencil, Pin, PinOff
+  Plus, X, Trash2, Globe, File, AlignLeft, Monitor, Save, Pencil, Pin, PinOff, Search
 } from "lucide-react";
 import MediaCards from "./MediaCards";
 import {
@@ -144,6 +144,7 @@ export default function Dashboard() {
   }>({ type: "link", label: "", url: "", filePath: "", content: "", embedUrl: "", categories: [] });
   const [newCategoryName, setNewCategoryName] = useState("");
   const [localItems, setLocalItems] = useState<Resource[] | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const categoryNames = ["All", ...categories.map((c) => c.name)];
 
@@ -156,6 +157,16 @@ export default function Dashboard() {
       : unpinned.filter((r) => getCategories(r).includes(activeCategory));
 
   const displayFiltered = localItems ?? filtered;
+
+  const q = searchQuery.toLowerCase().trim();
+  const searchFiltered = q
+    ? unpinned.filter((r) =>
+        r.label.toLowerCase().includes(q) ||
+        r.url?.toLowerCase().includes(q) ||
+        r.filePath?.toLowerCase().includes(q) ||
+        r.content?.toLowerCase().includes(q)
+      )
+    : null;
 
   const handleAdd = async () => {
     if (!newResource.label) return;
@@ -359,12 +370,33 @@ export default function Dashboard() {
             <Plus size={11} /> Category
           </button>
         )}
+        <div className="search-wrap">
+          <Search size={11} className="search-icon" />
+          <input
+            className="search-input"
+            placeholder="Search…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button className="search-clear" onClick={() => setSearchQuery("")}>
+              <X size={11} />
+            </button>
+          )}
+        </div>
         <button className="add-btn" onClick={() => setShowAddModal(true)}>
           <Plus size={14} /> Add
         </button>
       </nav>
 
-      {activeCategory === "All" ? (
+      {searchFiltered !== null ? (
+        <div className="resource-grid">
+          {searchFiltered.map((r) => <ResourceCard key={r._id} r={r} />)}
+          {searchFiltered.length === 0 && (
+            <div className="empty-state">No results for &ldquo;{searchQuery}&rdquo;</div>
+          )}
+        </div>
+      ) : activeCategory === "All" ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={displayFiltered.map((r) => r._id)} strategy={rectSortingStrategy}>
             <div className="resource-grid">
@@ -615,7 +647,15 @@ export default function Dashboard() {
         .inline-cat-form input { background: var(--bg); border: 1px solid var(--border-hover); color: var(--text-primary); padding: 4px 8px; border-radius: 3px; font-family: inherit; font-size: 11px; outline: none; width: 120px; }
         .inline-cat-form button { background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 4px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; transition: all 0.15s; }
         .inline-cat-form button:hover { color: var(--text-primary); border-color: var(--border-hover); }
-        .add-btn { margin-left: auto; display: flex; align-items: center; gap: 5px; background: #ffffff0a; border: 1px solid var(--border); color: var(--text-secondary); padding: 5px 14px; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; transition: all 0.15s; }
+        .search-wrap { display: flex; align-items: center; gap: 6px; margin-left: auto; background: transparent; border: 1px solid var(--border); border-radius: 3px; padding: 4px 8px; transition: border-color 0.15s; }
+        .search-wrap:focus-within { border-color: var(--border-hover); }
+        .search-icon { color: var(--text-muted); flex-shrink: 0; }
+        .search-input { background: none; border: none; outline: none; color: var(--text-primary); font-family: inherit; font-size: 11px; letter-spacing: 0.04em; width: 120px; transition: width 0.2s; }
+        .search-input:focus { width: 180px; }
+        .search-input::placeholder { color: var(--text-muted); }
+        .search-clear { background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; padding: 0; transition: color 0.15s; }
+        .search-clear:hover { color: var(--text-secondary); }
+        .add-btn { display: flex; align-items: center; gap: 5px; background: #ffffff0a; border: 1px solid var(--border); color: var(--text-secondary); padding: 5px 14px; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; transition: all 0.15s; }
         .add-btn:hover { border-color: var(--border-hover); color: var(--text-primary); background: #ffffff14; }
 
         .resource-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
