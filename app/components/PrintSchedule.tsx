@@ -277,6 +277,7 @@ export default function PrintSchedule() {
 
         .print-table {
           width: 100%;
+          min-width: 900px;
           border-collapse: collapse;
           font-size: 13px;
         }
