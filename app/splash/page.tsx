@@ -53,6 +53,8 @@ export default function Splash() {
           width={200}
           height={200}
           priority
+          onClick={() => setOpen(true)}
+          style={{ cursor: "pointer" }}
         />
 
         {open && (
