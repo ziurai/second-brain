@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useMutation, useAction } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Bell, BellOff, Send } from "lucide-react";
 
@@ -19,7 +19,6 @@ export default function PushManager() {
 
   const saveSubscription = useMutation(api.pushSubscriptions.save);
   const removeSubscription = useMutation(api.pushSubscriptions.remove);
-  const sendTest = useAction(api.push.send);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -78,10 +77,10 @@ export default function PushManager() {
 
   const handleTest = async () => {
     setShowMenu(false);
-    await sendTest({
-      title: "Second Brain",
-      body: "Push notifications are working! 🎉",
-      url: "/",
+    await fetch("/api/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Second Brain", body: "Push notifications are working! 🎉", url: "/" }),
     });
   };
 

@@ -10,10 +10,8 @@
 
 import type * as categories from "../categories.js";
 import type * as countdowns from "../countdowns.js";
-import type * as crons from "../crons.js";
 import type * as events from "../events.js";
 import type * as printJobs from "../printJobs.js";
-import type * as push from "../push.js";
 import type * as pushSubscriptions from "../pushSubscriptions.js";
 import type * as readlist from "../readlist.js";
 import type * as reminders from "../reminders.js";
@@ -29,10 +27,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   categories: typeof categories;
   countdowns: typeof countdowns;
-  crons: typeof crons;
   events: typeof events;
   printJobs: typeof printJobs;
-  push: typeof push;
   pushSubscriptions: typeof pushSubscriptions;
   readlist: typeof readlist;
   reminders: typeof reminders;
