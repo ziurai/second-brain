@@ -12,7 +12,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  SortableContext, useSortable, rectSortingStrategy,
+  SortableContext, useSortable, rectSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -143,6 +143,7 @@ export default function Dashboard() {
     categories: string[];
   }>({ type: "link", label: "", url: "", filePath: "", content: "", embedUrl: "", categories: [] });
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [localItems, setLocalItems] = useState<Resource[] | null>(null);
 
   const categoryNames = ["All", ...categories.map((c) => c.name)];
 
@@ -153,6 +154,8 @@ export default function Dashboard() {
     activeCategory === "All"
       ? unpinned
       : unpinned.filter((r) => getCategories(r).includes(activeCategory));
+
+  const displayFiltered = localItems ?? filtered;
 
   const handleAdd = async () => {
     if (!newResource.label) return;
@@ -225,13 +228,14 @@ export default function Dashboard() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = filtered.findIndex((r) => r._id === active.id);
-    const newIndex = filtered.findIndex((r) => r._id === over.id);
+    const items = localItems ?? filtered;
+    const oldIndex = items.findIndex((r) => r._id === active.id);
+    const newIndex = items.findIndex((r) => r._id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = [...filtered];
-    const [moved] = reordered.splice(oldIndex, 1);
-    reordered.splice(newIndex, 0, moved);
+    const reordered = arrayMove(items, oldIndex, newIndex);
+    setLocalItems(reordered);
     await reorderResources({ ids: reordered.map((r) => r._id) });
+    setLocalItems(null);
   };
 
   const handleClick = (r: Resource) => {
@@ -362,14 +366,14 @@ export default function Dashboard() {
 
       {activeCategory === "All" ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={filtered.map((r) => r._id)} strategy={rectSortingStrategy}>
+          <SortableContext items={displayFiltered.map((r) => r._id)} strategy={rectSortingStrategy}>
             <div className="resource-grid">
-              {filtered.map((r) => (
+              {displayFiltered.map((r) => (
                 <SortableCardWrapper key={r._id} id={r._id}>
                   <ResourceCard r={r} />
                 </SortableCardWrapper>
               ))}
-              {filtered.length === 0 && (
+              {displayFiltered.length === 0 && (
                 <div className="empty-state">
                   No resources in your brain yet.
                   <button onClick={() => setShowAddModal(true)}>Add one →</button>
