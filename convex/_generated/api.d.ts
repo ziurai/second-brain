@@ -12,6 +12,7 @@ import type * as categories from "../categories.js";
 import type * as countdowns from "../countdowns.js";
 import type * as events from "../events.js";
 import type * as printJobs from "../printJobs.js";
+import type * as reminders from "../reminders.js";
 import type * as resources from "../resources.js";
 
 import type {
@@ -25,6 +26,7 @@ declare const fullApi: ApiFromModules<{
   countdowns: typeof countdowns;
   events: typeof events;
   printJobs: typeof printJobs;
+  reminders: typeof reminders;
   resources: typeof resources;
 }>;
 

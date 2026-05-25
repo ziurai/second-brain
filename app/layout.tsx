@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Providers from "./providers";
+import Reminders from "./components/Reminders";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,7 +17,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <Reminders />
+        </Providers>
       </body>
     </html>
   );

@@ -44,4 +44,9 @@ export default defineSchema({
     endDate: v.optional(v.string()),
     order: v.number(),
   }),
+  reminders: defineTable({
+    text: v.string(),
+    checked: v.boolean(),
+    order: v.number(),
+  }),
 });
