@@ -34,3 +34,10 @@ html, body {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+
+/* ── Responsive page wrapper ── */
+@media (max-width: 640px) {
+  .main { padding: 0 16px !important; }
+  .header { padding-top: 32px !important; padding-bottom: 24px !important; }
+  .content { padding-top: 20px !important; }
+}

@@ -722,6 +722,17 @@ export default function CalendarView() {
 
         .submit-btn { display: flex; align-items: center; gap: 6px; justify-content: center; background: #ffffff0f; border: 1px solid var(--border-hover); color: var(--text-primary); padding: 9px 16px; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 12px; letter-spacing: 0.05em; transition: all 0.15s; width: 100%; }
         .submit-btn:hover { background: #ffffff18; }
+
+        /* ── Mobile ── */
+        @media (max-width: 640px) {
+          .cd-grid { grid-template-columns: 1fr; }
+          .event-grid { grid-template-columns: 1fr; }
+          .cd-row { grid-template-columns: 1fr auto auto; }
+          .cd-actions { opacity: 1; }
+          .event-actions { opacity: 1; }
+          .form-row-2 { grid-template-columns: 1fr; }
+          .form-row-3 { grid-template-columns: 1fr; }
+        }
       `}</style>
     </div>
   );
