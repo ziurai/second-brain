@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
 function getExpectedToken(): string {
-  const secret = process.env.AUTH_SECRET ?? "change-me";
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) throw new Error("AUTH_SECRET environment variable is required");
   return crypto.createHmac("sha256", secret).update("authenticated").digest("hex");
 }
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isAuthRoute = pathname.startsWith("/api/auth");
