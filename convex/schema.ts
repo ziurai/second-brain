@@ -35,6 +35,13 @@ export default defineSchema({
     endTime: v.optional(v.string()),
     location: v.optional(v.string()),
     notes: v.optional(v.string()),
+    recurrence: v.optional(v.string()),
+    order: v.number(),
+  }),
+  countdowns: defineTable({
+    title: v.string(),
+    startDate: v.string(),
+    endDate: v.optional(v.string()),
     order: v.number(),
   }),
 });

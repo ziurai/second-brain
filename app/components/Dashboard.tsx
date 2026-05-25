@@ -87,6 +87,7 @@ export default function Dashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [expandedNote, setExpandedNote] = useState<Resource | null>(null);
+  const [noteEditContent, setNoteEditContent] = useState("");
   const [expandedEmbed, setExpandedEmbed] = useState<Resource | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editFields, setEditFields] = useState<{
@@ -201,7 +202,7 @@ export default function Dashboard() {
       a.click();
       document.body.removeChild(a);
     }
-    if (r.type === "note") setExpandedNote(r);
+    if (r.type === "note") { setExpandedNote(r); setNoteEditContent(r.content ?? ""); }
     if (r.type === "embed") setExpandedEmbed(r);
   };
 
@@ -327,7 +328,23 @@ export default function Dashboard() {
               <span>{expandedNote.label}</span>
               <button onClick={() => setExpandedNote(null)}><X size={16} /></button>
             </div>
-            <pre className="note-content">{expandedNote.content}</pre>
+            <div className="note-edit-wrap">
+              <textarea
+                className="note-edit-area"
+                value={noteEditContent}
+                onChange={(e) => setNoteEditContent(e.target.value)}
+                rows={12}
+                placeholder="Write your note here..."
+              />
+            </div>
+            <div className="note-footer">
+              <button className="submit-btn" onClick={async () => {
+                await updateResource({ id: expandedNote._id, content: noteEditContent });
+                setExpandedNote(null);
+              }}>
+                <Save size={13} /> Save Note
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -566,7 +583,10 @@ export default function Dashboard() {
         .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 12px; letter-spacing: 0.05em; color: var(--text-secondary); }
         .modal-header button { background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; transition: color 0.15s; }
         .modal-header button:hover { color: var(--text-primary); }
-        .note-content { padding: 20px 18px; font-family: inherit; font-size: 13px; color: var(--text-primary); line-height: 1.7; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        .note-edit-wrap { padding: 16px 18px 0; }
+        .note-edit-area { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text-primary); padding: 12px 14px; border-radius: 4px; font-family: inherit; font-size: 13px; line-height: 1.7; outline: none; resize: vertical; box-sizing: border-box; transition: border-color 0.15s; }
+        .note-edit-area:focus { border-color: var(--border-hover); }
+        .note-footer { padding: 12px 18px 18px; }
         .embed-frame { width: 100%; height: 480px; border: none; display: block; background: var(--bg); }
         .form { padding: 20px 18px; display: flex; flex-direction: column; gap: 16px; }
         .form-row { display: flex; flex-direction: column; gap: 6px; }
