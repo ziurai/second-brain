@@ -62,4 +62,9 @@ export default defineSchema({
     read: v.boolean(),
     order: v.number(),
   }),
+  pushSubscriptions: defineTable({
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+  }).index("by_endpoint", ["endpoint"]),
 });
