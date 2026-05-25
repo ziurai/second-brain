@@ -17,6 +17,7 @@ export const add = mutation({
     content: v.optional(v.string()),
     embedUrl: v.optional(v.string()),
     category: v.string(),
+    categories: v.optional(v.array(v.string())),
     order: v.number(),
   },
   handler: async (ctx, args) => {
@@ -40,6 +41,8 @@ export const update = mutation({
     filePath: v.optional(v.string()),
     embedUrl: v.optional(v.string()),
     category: v.optional(v.string()),
+    categories: v.optional(v.array(v.string())),
+    pinned: v.optional(v.boolean()),
   },
   handler: async (ctx, { id, ...fields }) => {
     await ctx.db.patch(id, fields);

@@ -10,6 +10,8 @@ export default defineSchema({
     content: v.optional(v.string()),
     embedUrl: v.optional(v.string()),
     category: v.string(),
+    categories: v.optional(v.array(v.string())),
+    pinned: v.optional(v.boolean()),
     order: v.number(),
   }),
   categories: defineTable({
@@ -24,6 +26,15 @@ export default defineSchema({
     produce: v.optional(v.string()),
     shipDate: v.optional(v.string()),
     shipBy: v.optional(v.string()),
+    order: v.number(),
+  }),
+  events: defineTable({
+    title: v.string(),
+    date: v.string(),
+    time: v.optional(v.string()),
+    endTime: v.optional(v.string()),
+    location: v.optional(v.string()),
+    notes: v.optional(v.string()),
     order: v.number(),
   }),
 });

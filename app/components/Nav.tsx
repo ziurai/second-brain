@@ -1,14 +1,20 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const TABS = [
-  { label: "Brain", href: "/" },
-  { label: "Print", href: "/print" },
-];
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 export default function Nav() {
   const pathname = usePathname();
+  const todayDate = new Date().toLocaleDateString("en-CA");
+  const todayCount = useQuery(api.events.todayCount, { todayDate }) ?? 0;
+
+  const TABS = [
+    { label: "Brain", href: "/" },
+    { label: "Print", href: "/print" },
+    { label: "Calendar", href: "/calendar", badge: todayCount > 0 ? todayCount : 0 },
+  ];
+
   return (
     <nav className="top-nav">
       {TABS.map((t) => (
@@ -18,6 +24,9 @@ export default function Nav() {
           className={`top-nav-link ${pathname === t.href ? "active" : ""}`}
         >
           {t.label}
+          {"badge" in t && t.badge > 0 && (
+            <span className="nav-badge">{t.badge}</span>
+          )}
         </Link>
       ))}
       <style>{`
@@ -38,11 +47,29 @@ export default function Nav() {
           border-bottom: 1px solid transparent;
           margin-bottom: -1px;
           transition: color 0.15s, border-color 0.15s;
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
         .top-nav-link:hover { color: var(--text-secondary); }
         .top-nav-link.active {
           color: var(--text-primary);
           border-bottom-color: var(--text-primary);
+        }
+        .nav-badge {
+          background: #dc2626;
+          color: #fff;
+          font-size: 9px;
+          font-weight: 600;
+          letter-spacing: 0;
+          border-radius: 99px;
+          min-width: 16px;
+          height: 16px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 4px;
+          line-height: 1;
         }
       `}</style>
     </nav>
