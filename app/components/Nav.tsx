@@ -9,10 +9,10 @@ export default function Nav() {
   const todayDate = new Date().toLocaleDateString("en-CA");
   const todayCount = useQuery(api.events.todayCount, { todayDate }) ?? 0;
 
-  const TABS = [
-    { label: "Brain", href: "/" },
-    { label: "Print", href: "/print" },
-    { label: "Calendar", href: "/calendar", badge: todayCount > 0 ? todayCount : 0 },
+  const TABS: { label: string; href: string; badge: number }[] = [
+    { label: "Brain", href: "/", badge: 0 },
+    { label: "Print", href: "/print", badge: 0 },
+    { label: "Calendar", href: "/calendar", badge: todayCount },
   ];
 
   return (
@@ -24,7 +24,7 @@ export default function Nav() {
           className={`top-nav-link ${pathname === t.href ? "active" : ""}`}
         >
           {t.label}
-          {"badge" in t && t.badge > 0 && (
+          {t.badge > 0 && (
             <span className="nav-badge">{t.badge}</span>
           )}
         </Link>
