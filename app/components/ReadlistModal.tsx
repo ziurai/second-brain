@@ -104,7 +104,6 @@ export default function ReadlistModal({ onClose }: { onClose: () => void }) {
               onClick={() => setTab("unread")}
             >
               Unread
-              {unread.length > 0 && <span className="wl-tab-badge">{unread.length}</span>}
             </button>
             <button
               className={`wl-tab${tab === "read" ? " active" : ""}`}

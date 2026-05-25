@@ -150,7 +150,6 @@ export default function WatchlistModal({ type, onClose }: { type: WLType; onClos
               onClick={() => setTab("unwatched")}
             >
               Unwatched
-              {unwatched.length > 0 && <span className="wl-tab-badge">{unwatched.length}</span>}
             </button>
             <button
               className={`wl-tab${tab === "watched" ? " active" : ""}`}
