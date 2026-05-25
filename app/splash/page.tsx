@@ -9,6 +9,11 @@ export default function Splash() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
+
+  useEffect(() => {
+    setIsTouch(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -53,8 +58,8 @@ export default function Splash() {
           width={200}
           height={200}
           priority
-          onClick={() => setOpen(true)}
-          style={{ cursor: "pointer" }}
+          onClick={() => isTouch && setOpen(true)}
+          style={{ cursor: isTouch ? "pointer" : "default" }}
         />
 
         {open && (
