@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -40,17 +41,15 @@ function EditableCell({
   value,
   onSave,
   placeholder,
-  type = "text",
 }: {
   value: string;
   onSave: (v: string) => void;
   placeholder?: string;
-  type?: string;
 }) {
   return (
     <input
       className="cell-input"
-      type={type}
+      type="text"
       defaultValue={value}
       placeholder={placeholder}
       onBlur={(e) => {
@@ -67,14 +66,85 @@ function EditableCell({
   );
 }
 
+function DateCell({
+  value,
+  onSave,
+  copiedDate,
+  onCopy,
+}: {
+  value: string;
+  onSave: (v: string) => void;
+  copiedDate: string | null;
+  onCopy: (date: string) => void;
+}) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => { setLocal(value); }, [value]);
+
+  return (
+    <input
+      className={`cell-input${!local ? " date-empty" : ""}`}
+      type="date"
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => { if (local !== value) onSave(local); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        if (e.key === "Escape") {
+          setLocal(value);
+          (e.target as HTMLInputElement).blur();
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === "c" && local) {
+          e.preventDefault();
+          onCopy(local);
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === "v" && copiedDate) {
+          e.preventDefault();
+          setLocal(copiedDate);
+        }
+      }}
+    />
+  );
+}
+
 export default function PrintSchedule() {
   const jobs = (useQuery(api.printJobs.list) ?? []) as Job[];
   const addJob = useMutation(api.printJobs.add);
   const updateJob = useMutation(api.printJobs.update);
   const removeJob = useMutation(api.printJobs.remove);
 
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [copiedDate, setCopiedDate] = useState<string | null>(null);
+
   const update = (id: Id<"printJobs">, fields: Partial<Omit<Job, "_id" | "order">>) => {
     updateJob({ id, ...fields });
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allSelected = jobs.length > 0 && selected.size === jobs.length;
+
+  const toggleSelectAll = () => {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(jobs.map((j) => j._id)));
+  };
+
+  const deleteSelected = async () => {
+    for (const id of selected) {
+      await removeJob({ id: id as Id<"printJobs"> });
+    }
+    setSelected(new Set());
+  };
+
+  const formatCopiedDate = (iso: string) => {
+    const [y, m, d] = iso.split("-");
+    return `${m}/${d}/${y}`;
   };
 
   return (
@@ -83,6 +153,15 @@ export default function PrintSchedule() {
         <table className="print-table">
           <thead>
             <tr>
+              <th className="col-check">
+                <input
+                  type="checkbox"
+                  className="row-check"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                  title="Select all"
+                />
+              </th>
               <th className="col-status">Status</th>
               <th className="col-descriptor">Color / Descriptor</th>
               <th className="col-product">Product</th>
@@ -95,7 +174,18 @@ export default function PrintSchedule() {
           </thead>
           <tbody>
             {jobs.map((job) => (
-              <tr key={job._id} className="print-row">
+              <tr
+                key={job._id}
+                className={`print-row${selected.has(job._id) ? " row-selected" : ""}`}
+              >
+                <td className="col-check">
+                  <input
+                    type="checkbox"
+                    className="row-check"
+                    checked={selected.has(job._id)}
+                    onChange={() => toggleSelect(job._id)}
+                  />
+                </td>
                 <td className="col-status">
                   <button
                     className="status-btn"
@@ -126,24 +216,27 @@ export default function PrintSchedule() {
                   />
                 </td>
                 <td>
-                  <EditableCell
+                  <DateCell
                     value={job.produce ?? ""}
-                    type="date"
                     onSave={(v) => update(job._id, { produce: v })}
+                    copiedDate={copiedDate}
+                    onCopy={setCopiedDate}
                   />
                 </td>
                 <td>
-                  <EditableCell
+                  <DateCell
                     value={job.shipDate ?? ""}
-                    type="date"
                     onSave={(v) => update(job._id, { shipDate: v })}
+                    copiedDate={copiedDate}
+                    onCopy={setCopiedDate}
                   />
                 </td>
                 <td>
-                  <EditableCell
+                  <DateCell
                     value={job.shipBy ?? ""}
-                    type="date"
                     onSave={(v) => update(job._id, { shipBy: v })}
+                    copiedDate={copiedDate}
+                    onCopy={setCopiedDate}
                   />
                 </td>
                 <td className="col-del">
@@ -161,8 +254,24 @@ export default function PrintSchedule() {
         <Plus size={13} /> Add row
       </button>
 
+      {selected.size > 0 && (
+        <div className="bulk-bar">
+          <span className="bulk-count">{selected.size} row{selected.size !== 1 ? "s" : ""} selected</span>
+          <button className="bulk-delete-btn" onClick={deleteSelected}>
+            <Trash2 size={13} />
+            Delete {selected.size} row{selected.size !== 1 ? "s" : ""}
+          </button>
+        </div>
+      )}
+
+      {copiedDate && (
+        <div className="copy-toast">
+          {formatCopiedDate(copiedDate)} copied — ⌘V to paste into any date field
+        </div>
+      )}
+
       <style>{`
-        .print-schedule { padding-bottom: 60px; }
+        .print-schedule { padding-bottom: 80px; }
 
         .table-wrap { overflow-x: auto; }
 
@@ -186,15 +295,24 @@ export default function PrintSchedule() {
 
         .print-row { border-bottom: 1px solid var(--border); }
         .print-row:hover { background: #ffffff04; }
+        .print-row.row-selected { background: #ffffff07; }
 
         .print-table td { padding: 4px 6px; vertical-align: middle; }
 
+        .col-check { width: 36px; text-align: center; }
         .col-status { width: 64px; text-align: center; }
         .col-descriptor { width: 140px; }
         .col-product { width: 200px; }
         .col-customer { width: 180px; }
         .col-date { width: 140px; }
         .col-del { width: 36px; }
+
+        .row-check {
+          accent-color: #888;
+          cursor: pointer;
+          width: 14px;
+          height: 14px;
+        }
 
         .status-btn {
           width: 28px;
@@ -224,6 +342,8 @@ export default function PrintSchedule() {
         .cell-input:focus { border-color: var(--border-hover); background: #ffffff08; }
         .cell-input[type="date"] { color-scheme: dark; }
         .cell-input::placeholder { color: var(--text-muted); }
+        .cell-input.date-empty { color: var(--text-muted); }
+        .cell-input.date-empty:focus { color: var(--text-primary); }
 
         .del-btn {
           background: none;
@@ -258,6 +378,58 @@ export default function PrintSchedule() {
           transition: color 0.15s, border-color 0.15s;
         }
         .add-row-btn:hover { color: var(--text-secondary); border-color: var(--border-hover); }
+
+        .bulk-bar {
+          position: fixed;
+          bottom: 32px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #141414;
+          border: 1px solid var(--border-hover);
+          border-radius: 8px;
+          padding: 10px 16px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+          z-index: 100;
+          white-space: nowrap;
+        }
+        .bulk-count {
+          font-size: 12px;
+          color: var(--text-muted);
+          letter-spacing: 0.03em;
+        }
+        .bulk-delete-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: #450a0a;
+          border: 1px solid #7f1d1d;
+          color: #fca5a5;
+          font-family: inherit;
+          font-size: 12px;
+          letter-spacing: 0.03em;
+          padding: 6px 14px;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .bulk-delete-btn:hover { background: #7f1d1d; }
+
+        .copy-toast {
+          position: fixed;
+          bottom: 32px;
+          right: 40px;
+          font-size: 11px;
+          color: var(--text-muted);
+          background: #141414;
+          border: 1px solid var(--border);
+          border-radius: 5px;
+          padding: 6px 12px;
+          z-index: 99;
+          letter-spacing: 0.02em;
+        }
       `}</style>
     </div>
   );
