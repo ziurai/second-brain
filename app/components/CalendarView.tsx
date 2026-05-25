@@ -265,10 +265,12 @@ function CountdownRow({
   const { text } = countdownLabel(c);
   return (
     <div className="cd-row">
-      <div className="cd-title">{c.title}</div>
-      <div className="cd-dates">
-        {formatFull(c.startDate)}
-        {c.endDate && ` – ${formatFull(c.endDate)}`}
+      <div className="cd-info">
+        <div className="cd-title">{c.title}</div>
+        <div className="cd-dates">
+          {formatFull(c.startDate)}
+          {c.endDate && ` – ${formatFull(c.endDate)}`}
+        </div>
       </div>
       <div className="cd-label">{text}</div>
       <div className="cd-actions">
@@ -368,9 +370,11 @@ function CountdownSection() {
         <div className="cd-empty">No upcoming dates. <button onClick={() => setShowAdd(true)}>Add one →</button></div>
       )}
 
-      {active.map((c) => (
-        <CountdownRow key={c._id} c={c} onEdit={openEdit} onDelete={(id) => removeCountdown({ id })} />
-      ))}
+      <div className="cd-grid">
+        {active.map((c) => (
+          <CountdownRow key={c._id} c={c} onEdit={openEdit} onDelete={(id) => removeCountdown({ id })} />
+        ))}
+      </div>
 
       {showAdd && (
         <div className="modal-overlay" onClick={() => setShowAdd(false)}>
@@ -489,7 +493,7 @@ export default function CalendarView() {
         </div>
       )}
 
-      <div className="event-list">
+      <div className="event-list event-grid">
         {upcoming.map(({ ev, displayDate }) => (
           <EventRow
             key={ev._id}
@@ -561,23 +565,32 @@ export default function CalendarView() {
           background: none; border: none; color: var(--text-secondary);
           cursor: pointer; font-family: inherit; font-size: 11px;
         }
+        .cd-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          column-gap: 24px;
+        }
         .cd-row {
           display: grid;
-          grid-template-columns: 1fr 1fr auto auto;
+          grid-template-columns: 1fr auto auto;
           align-items: center;
-          gap: 16px;
+          gap: 12px;
           padding: 10px 0;
           border-top: 1px solid var(--border);
         }
         .cd-row:hover .cd-actions { opacity: 1; }
+        .cd-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
         .cd-title {
           font-size: 14px;
           font-weight: 500;
           color: var(--text-primary);
           letter-spacing: -0.01em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .cd-dates {
-          font-size: 12px;
+          font-size: 11px;
           color: var(--text-secondary);
         }
         .cd-label {
@@ -632,6 +645,11 @@ export default function CalendarView() {
 
         /* ── Event list ── */
         .event-list { margin-top: 4px; }
+        .event-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          column-gap: 32px;
+        }
         .event-row {
           display: flex;
           gap: 20px;

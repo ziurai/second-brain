@@ -162,29 +162,33 @@ export default function WatchlistModal({ type, onClose }: { type: WLType; onClos
 
           {tab === "unwatched" && (
             <div className="wl-add-row">
-              <input
-                className="wl-add-input"
-                placeholder={`Add ${type === "movie" ? "movie" : "show"}...`}
-                value={newTitle}
-                autoFocus
-                onChange={(e) => setNewTitle(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-              />
-              <input
-                className="wl-add-input wl-add-sm"
-                placeholder="Year / date"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-              />
-              <input
-                className="wl-add-input wl-add-sm"
-                placeholder="Platform"
-                value={newPlatform}
-                onChange={(e) => setNewPlatform(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-              />
-              <button className="wl-add-btn" onClick={handleAdd}><Plus size={14} /></button>
+              <div className="wl-add-main">
+                <input
+                  className="wl-add-input"
+                  placeholder={`Add ${type === "movie" ? "movie" : "show"}...`}
+                  value={newTitle}
+                  autoFocus
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                />
+                <button className="wl-add-btn" onClick={handleAdd}><Plus size={14} /></button>
+              </div>
+              <div className="wl-add-sub">
+                <input
+                  className="wl-add-input wl-add-sub-input"
+                  placeholder="Year / date"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                />
+                <input
+                  className="wl-add-input wl-add-sub-input"
+                  placeholder="Platform"
+                  value={newPlatform}
+                  onChange={(e) => setNewPlatform(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                />
+              </div>
             </div>
           )}
 
@@ -222,11 +226,13 @@ export default function WatchlistModal({ type, onClose }: { type: WLType; onClos
         .wl-tab.active { color: var(--text-primary); border-bottom-color: var(--accent); }
         .wl-tab-badge { background: #dc2626; color: #fff; font-size: 9px; font-weight: 700; letter-spacing: 0; border-radius: 99px; min-width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; }
 
-        .wl-add-row { display: flex; align-items: center; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-        .wl-add-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text-primary); font-family: inherit; font-size: 13px; }
+        .wl-add-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        .wl-add-main { display: flex; align-items: center; gap: 6px; }
+        .wl-add-sub { display: flex; gap: 12px; }
+        .wl-add-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text-primary); font-family: inherit; font-size: 13px; min-width: 0; }
         .wl-add-input::placeholder { color: var(--text-muted); }
-        .wl-add-sm { flex: 0 0 90px; font-size: 11px; }
-        .wl-add-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; padding: 2px; transition: color 0.15s; }
+        .wl-add-sub-input { font-size: 11px; color: var(--text-secondary); }
+        .wl-add-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; padding: 2px; flex-shrink: 0; transition: color 0.15s; }
         .wl-add-btn:hover { color: var(--text-primary); }
 
         .wl-list { overflow-y: auto; max-height: 380px; padding: 6px 0; }
