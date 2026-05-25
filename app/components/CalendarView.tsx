@@ -40,8 +40,6 @@ function formatDate(iso: string) {
   return {
     dayOfWeek: dt.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase(),
     monthDay: dt.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    full: dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
-    iso,
   };
 }
 
@@ -58,6 +56,117 @@ function isToday(iso: string) {
 
 function isPast(iso: string) {
   return iso < new Date().toLocaleDateString("en-CA");
+}
+
+// Defined outside CalendarView so React doesn't remount on every render
+function EventRow({
+  ev,
+  dim,
+  onEdit,
+  onDelete,
+}: {
+  ev: CalEvent;
+  dim?: boolean;
+  onEdit: (ev: CalEvent) => void;
+  onDelete: (id: Id<"events">) => void;
+}) {
+  const d = formatDate(ev.date);
+  const today = isToday(ev.date);
+  return (
+    <div className={`event-row${dim ? " event-past" : ""}${today ? " event-today" : ""}`}>
+      <div className="event-date-col">
+        <span className="event-dow">{d.dayOfWeek}</span>
+        <span className="event-md">{d.monthDay}</span>
+        {today && <span className="today-dot" />}
+      </div>
+      <div className="event-body">
+        <div className="event-title">{ev.title}</div>
+        {(ev.time || ev.endTime) && (
+          <div className="event-meta">
+            <Clock size={10} />
+            {ev.time ? formatTime(ev.time) : ""}
+            {ev.endTime ? ` – ${formatTime(ev.endTime)}` : ""}
+          </div>
+        )}
+        {ev.location && (
+          <div className="event-meta">
+            <MapPin size={10} />
+            {ev.location}
+          </div>
+        )}
+        {ev.notes && <div className="event-notes">{ev.notes}</div>}
+      </div>
+      <div className="event-actions">
+        <button className="ev-btn" onClick={() => onEdit(ev)}><Pencil size={11} /></button>
+        <button className="ev-btn ev-delete" onClick={() => onDelete(ev._id)}><Trash2 size={11} /></button>
+      </div>
+    </div>
+  );
+}
+
+// Defined outside CalendarView so inputs don't lose focus on state change
+function EventFormFields({
+  f,
+  setF,
+}: {
+  f: EventForm;
+  setF: React.Dispatch<React.SetStateAction<EventForm>>;
+}) {
+  return (
+    <div className="form">
+      <div className="form-row">
+        <label>Title *</label>
+        <input
+          placeholder="e.g. Team Meeting"
+          value={f.title}
+          onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))}
+        />
+      </div>
+      <div className="form-row-2">
+        <div className="form-row">
+          <label>Date *</label>
+          <input
+            type="date"
+            value={f.date}
+            onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
+          />
+        </div>
+        <div className="form-row">
+          <label>Time</label>
+          <input
+            type="time"
+            value={f.time}
+            onChange={(e) => setF((p) => ({ ...p, time: e.target.value }))}
+          />
+        </div>
+        <div className="form-row">
+          <label>End Time</label>
+          <input
+            type="time"
+            value={f.endTime}
+            onChange={(e) => setF((p) => ({ ...p, endTime: e.target.value }))}
+          />
+        </div>
+      </div>
+      <div className="form-row">
+        <label>Location</label>
+        <input
+          placeholder="e.g. Zoom, Coffee Shop"
+          value={f.location}
+          onChange={(e) => setF((p) => ({ ...p, location: e.target.value }))}
+        />
+      </div>
+      <div className="form-row">
+        <label>Notes</label>
+        <textarea
+          placeholder="Any additional details..."
+          value={f.notes}
+          onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))}
+          rows={3}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function CalendarView() {
@@ -120,103 +229,6 @@ export default function CalendarView() {
     setEditingEvent(null);
   };
 
-  const EventRow = ({ ev, dim }: { ev: CalEvent; dim?: boolean }) => {
-    const d = formatDate(ev.date);
-    const today = isToday(ev.date);
-    return (
-      <div className={`event-row${dim ? " event-past" : ""}${today ? " event-today" : ""}`}>
-        <div className="event-date-col">
-          <span className="event-dow">{d.dayOfWeek}</span>
-          <span className="event-md">{d.monthDay}</span>
-          {today && <span className="today-dot" />}
-        </div>
-        <div className="event-body">
-          <div className="event-title">{ev.title}</div>
-          {(ev.time || ev.endTime) && (
-            <div className="event-meta">
-              <Clock size={10} />
-              {ev.time ? formatTime(ev.time) : ""}
-              {ev.endTime ? ` – ${formatTime(ev.endTime)}` : ""}
-            </div>
-          )}
-          {ev.location && (
-            <div className="event-meta">
-              <MapPin size={10} />
-              {ev.location}
-            </div>
-          )}
-          {ev.notes && <div className="event-notes">{ev.notes}</div>}
-        </div>
-        <div className="event-actions">
-          <button className="ev-btn" onClick={() => openEdit(ev)}><Pencil size={11} /></button>
-          <button className="ev-btn ev-delete" onClick={() => removeEvent({ id: ev._id })}><Trash2 size={11} /></button>
-        </div>
-      </div>
-    );
-  };
-
-  const EventFormFields = ({
-    f,
-    setF,
-  }: {
-    f: EventForm;
-    setF: (fn: (p: EventForm) => EventForm) => void;
-  }) => (
-    <div className="form">
-      <div className="form-row">
-        <label>Title *</label>
-        <input
-          placeholder="e.g. Team Meeting"
-          value={f.title}
-          onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))}
-        />
-      </div>
-      <div className="form-row-2">
-        <div className="form-row">
-          <label>Date *</label>
-          <input
-            type="date"
-            value={f.date}
-            onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
-          />
-        </div>
-        <div className="form-row">
-          <label>Time</label>
-          <input
-            type="time"
-            value={f.time}
-            onChange={(e) => setF((p) => ({ ...p, time: e.target.value }))}
-          />
-        </div>
-        <div className="form-row">
-          <label>End Time</label>
-          <input
-            type="time"
-            value={f.endTime}
-            onChange={(e) => setF((p) => ({ ...p, endTime: e.target.value }))}
-          />
-        </div>
-      </div>
-      <div className="form-row">
-        <label>Location</label>
-        <input
-          placeholder="e.g. Zoom, Coffee Shop"
-          value={f.location}
-          onChange={(e) => setF((p) => ({ ...p, location: e.target.value }))}
-        />
-      </div>
-      <div className="form-row">
-        <label>Notes</label>
-        <textarea
-          placeholder="Any additional details..."
-          value={f.notes}
-          onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))}
-          rows={3}
-        />
-      </div>
-    </div>
-  );
-
   return (
     <div className="cal-view">
       <div className="cal-toolbar">
@@ -235,7 +247,7 @@ export default function CalendarView() {
         <section className="event-section">
           <div className="section-label">Upcoming</div>
           {upcoming.map((ev) => (
-            <EventRow key={ev._id} ev={ev} />
+            <EventRow key={ev._id} ev={ev} onEdit={openEdit} onDelete={(id) => removeEvent({ id })} />
           ))}
         </section>
       )}
@@ -244,7 +256,7 @@ export default function CalendarView() {
         <section className="event-section">
           <div className="section-label past-label">Past</div>
           {past.map((ev) => (
-            <EventRow key={ev._id} ev={ev} dim />
+            <EventRow key={ev._id} ev={ev} dim onEdit={openEdit} onDelete={(id) => removeEvent({ id })} />
           ))}
         </section>
       )}
@@ -334,9 +346,7 @@ export default function CalendarView() {
         .event-row:hover { background: #ffffff03; }
         .event-row:hover .event-actions { opacity: 1; }
 
-        .event-today .event-date-col { position: relative; }
         .event-today .event-md { color: #f87171; }
-
         .event-past { opacity: 0.45; }
 
         .event-date-col {
