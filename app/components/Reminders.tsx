@@ -5,59 +5,13 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { Plus, Trash2, X } from "lucide-react";
+import { burst } from "../lib/confetti";
 
 interface Reminder {
   _id: Id<"reminders">;
   text: string;
   checked: boolean;
   order: number;
-}
-
-// ─── Rainbow confetti burst ───────────────────────────────────────────────────
-
-const COLORS = ["#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff", "#c77dff", "#ff9ff3", "#f9844a", "#ffffff"];
-
-function burst(originEl: HTMLElement) {
-  const rect = originEl.getBoundingClientRect();
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-
-  Array.from({ length: 22 }).forEach((_, i) => {
-    const el = document.createElement("div");
-    const color = COLORS[i % COLORS.length];
-    const angle = (Math.PI * 2 * i) / 22 + (Math.random() - 0.5) * 0.6;
-    const dist = 28 + Math.random() * 52;
-    const size = 4 + Math.random() * 6;
-    const isCircle = Math.random() > 0.45;
-    const rotation = Math.random() * 540 - 270;
-
-    Object.assign(el.style, {
-      position: "fixed",
-      left: `${cx}px`,
-      top: `${cy}px`,
-      width: `${size}px`,
-      height: `${size}px`,
-      background: color,
-      borderRadius: isCircle ? "50%" : "2px",
-      pointerEvents: "none",
-      zIndex: "9999",
-    });
-
-    document.body.appendChild(el);
-
-    el.animate(
-      [
-        { transform: "translate(-50%,-50%) scale(1.4)", opacity: 1 },
-        {
-          transform: `translate(calc(-50% + ${Math.cos(angle) * dist}px), calc(-50% + ${Math.sin(angle) * dist}px)) scale(0) rotate(${rotation}deg)`,
-          opacity: 0,
-        },
-      ],
-      { duration: 580 + Math.random() * 180, easing: "ease-out", fill: "forwards" }
-    );
-
-    setTimeout(() => el.remove(), 800);
-  });
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -69,7 +23,7 @@ export default function Reminders() {
   const toggleReminder = useMutation(api.reminders.toggle);
   const updateReminder = useMutation(api.reminders.update);
   const removeReminder = useMutation(api.reminders.remove);
-  const removeUnchecked = useMutation(api.reminders.removeUnchecked);
+  const removeChecked = useMutation(api.reminders.removeChecked);
 
   const [open, setOpen] = useState(false);
   const [newText, setNewText] = useState("");
@@ -117,13 +71,13 @@ export default function Reminders() {
           <div className="rem-header">
             <span className="rem-title">Reminders</span>
             <div className="rem-header-right">
-              {unchecked.length > 0 && (
+              {checked.length > 0 && (
                 <button
                   className="rem-clear"
-                  onClick={() => removeUnchecked()}
-                  title="Delete all unchecked"
+                  onClick={() => removeChecked()}
+                  title="Clear all done"
                 >
-                  <Trash2 size={11} /> Delete unchecked
+                  <Trash2 size={11} /> Clear done
                 </button>
               )}
               <button className="rem-close" onClick={() => setOpen(false)}>

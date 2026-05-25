@@ -36,10 +36,10 @@ export const remove = mutation({
   },
 });
 
-export const removeUnchecked = mutation({
+export const removeChecked = mutation({
   args: {},
   handler: async (ctx) => {
     const all = await ctx.db.query("reminders").collect();
-    await Promise.all(all.filter((r) => !r.checked).map((r) => ctx.db.delete(r._id)));
+    await Promise.all(all.filter((r) => r.checked).map((r) => ctx.db.delete(r._id)));
   },
 });

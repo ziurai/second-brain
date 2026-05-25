@@ -49,4 +49,17 @@ export default defineSchema({
     checked: v.boolean(),
     order: v.number(),
   }),
+  watchlist: defineTable({
+    type: v.union(v.literal("movie"), v.literal("tv")),
+    title: v.string(),
+    releaseDate: v.optional(v.string()),
+    platform: v.optional(v.string()),
+    watched: v.boolean(),
+    order: v.number(),
+  }),
+  readlist: defineTable({
+    title: v.string(),
+    read: v.boolean(),
+    order: v.number(),
+  }),
 });

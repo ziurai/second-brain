@@ -6,6 +6,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import {
   Plus, X, Trash2, Globe, File, AlignLeft, Monitor, Save, Pencil, Pin, PinOff
 } from "lucide-react";
+import MediaCards from "./MediaCards";
 
 type ResourceType = "link" | "file" | "note" | "embed";
 
@@ -255,6 +256,8 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+      <MediaCards />
+
       {pinned.length > 0 && (
         <section className="pinned-section">
           <div className="pinned-label">Pinned</div>
