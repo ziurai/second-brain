@@ -7,6 +7,14 @@ import {
   Plus, X, Trash2, Globe, File, AlignLeft, Monitor, Save, Pencil, Pin, PinOff
 } from "lucide-react";
 import MediaCards from "./MediaCards";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, useSortable, rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type ResourceType = "link" | "file" | "note" | "embed";
 
@@ -74,6 +82,27 @@ function CategoryToggle({
   );
 }
 
+function SortableCardWrapper({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging ? 10 : undefined,
+        position: "relative",
+        cursor: isDragging ? "grabbing" : "grab",
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const resources = (useQuery(api.resources.list) ?? []) as Resource[];
   const categories = useQuery(api.categories.list) ?? [];
@@ -81,8 +110,13 @@ export default function Dashboard() {
   const addResource = useMutation(api.resources.add);
   const removeResource = useMutation(api.resources.remove);
   const updateResource = useMutation(api.resources.update);
+  const reorderResources = useMutation(api.resources.reorder);
   const addCategory = useMutation(api.categories.add);
   const removeCategory = useMutation(api.categories.remove);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const [activeCategory, setActiveCategory] = useState("All");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -186,6 +220,18 @@ export default function Dashboard() {
   const handleDeleteCategory = async (id: Id<"categories">, name: string) => {
     await removeCategory({ id });
     if (activeCategory === name) setActiveCategory("All");
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = filtered.findIndex((r) => r._id === active.id);
+    const newIndex = filtered.findIndex((r) => r._id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = [...filtered];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+    await reorderResources({ ids: reordered.map((r) => r._id) });
   };
 
   const handleClick = (r: Resource) => {
@@ -314,15 +360,35 @@ export default function Dashboard() {
         </button>
       </nav>
 
-      <div className="resource-grid">
-        {filtered.map((r) => <ResourceCard key={r._id} r={r} />)}
-        {filtered.length === 0 && (
-          <div className="empty-state">
-            No resources in {activeCategory === "All" ? "your brain" : activeCategory} yet.
-            <button onClick={() => setShowAddModal(true)}>Add one →</button>
-          </div>
-        )}
-      </div>
+      {activeCategory === "All" ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={filtered.map((r) => r._id)} strategy={rectSortingStrategy}>
+            <div className="resource-grid">
+              {filtered.map((r) => (
+                <SortableCardWrapper key={r._id} id={r._id}>
+                  <ResourceCard r={r} />
+                </SortableCardWrapper>
+              ))}
+              {filtered.length === 0 && (
+                <div className="empty-state">
+                  No resources in your brain yet.
+                  <button onClick={() => setShowAddModal(true)}>Add one →</button>
+                </div>
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
+      ) : (
+        <div className="resource-grid">
+          {filtered.map((r) => <ResourceCard key={r._id} r={r} />)}
+          {filtered.length === 0 && (
+            <div className="empty-state">
+              No resources in {activeCategory} yet.
+              <button onClick={() => setShowAddModal(true)}>Add one →</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {expandedNote && (
         <div className="modal-overlay" onClick={() => setExpandedNote(null)}>

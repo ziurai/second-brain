@@ -4,7 +4,8 @@ import { v } from "convex/values";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("resources").order("asc").collect();
+    const items = await ctx.db.query("resources").collect();
+    return items.sort((a, b) => a.order - b.order);
   },
 });
 
@@ -29,6 +30,13 @@ export const remove = mutation({
   args: { id: v.id("resources") },
   handler: async (ctx, { id }) => {
     await ctx.db.delete(id);
+  },
+});
+
+export const reorder = mutation({
+  args: { ids: v.array(v.id("resources")) },
+  handler: async (ctx, { ids }) => {
+    await Promise.all(ids.map((id, i) => ctx.db.patch(id, { order: i })));
   },
 });
 
