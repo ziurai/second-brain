@@ -41,6 +41,15 @@ export const remove = mutation({
   },
 });
 
+export const deleteAll = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const items = await ctx.db.query("etsyTransactions").collect();
+    await Promise.all(items.map((item) => ctx.db.delete(item._id)));
+    return items.length;
+  },
+});
+
 export const batchAdd = mutation({
   args: {
     transactions: v.array(

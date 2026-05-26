@@ -122,7 +122,7 @@ function parseCSV(text: string): { rows: ParsedTx[]; skipped: number } {
       if (incomeAmt !== null && incomeAmt > 0) {
         rows.push({ type: "robert", date, amount: incomeAmt, description: "Robert income" });
       } else if (expenseAmt !== null && expenseAmt > 0) {
-        rows.push({ type: "robert", date, amount: expenseAmt, description: "Robert expense" });
+        rows.push({ type: "robert", date, amount: -expenseAmt, description: "Robert expense" });
       } else {
         skipped++;
       }
@@ -264,14 +264,14 @@ function TxRow({
 }) {
   const typeColor = tx.type === "income" ? "#6ee7b7" : tx.type === "robert" ? "#a78bfa" : "#f87171";
   const typeLabel = tx.type === "income" ? "Income" : tx.type === "robert" ? "Robert" : "Expense";
-  const sign = tx.type === "expense" ? "-" : "+";
-  const amountColor = tx.type === "expense" ? "#f87171" : tx.type === "robert" ? "#a78bfa" : "#6ee7b7";
+  const sign = (tx.type === "expense" || tx.amount < 0) ? "-" : "+";
+  const amountColor = (tx.type === "expense" || tx.amount < 0) ? "#f87171" : tx.type === "robert" ? "#a78bfa" : "#6ee7b7";
 
   return (
     <tr className="tx-row">
       <td className="tx-date">{formatDate(tx.date)}</td>
       <td><span className="tx-badge" style={{ color: typeColor, borderColor: typeColor + "44" }}>{typeLabel}</span></td>
-      <td className="tx-amount" style={{ color: amountColor }}>{sign}{usd(tx.amount)}</td>
+      <td className="tx-amount" style={{ color: amountColor }}>{sign}{usd(Math.abs(tx.amount))}</td>
       <td className="tx-desc">{tx.description ?? <span className="tx-nodesc">—</span>}</td>
       <td className="tx-actions">
         <button className="tx-btn" onClick={() => onEdit(tx)}><Pencil size={11} /></button>
@@ -373,6 +373,7 @@ export default function EtsySales() {
   const updateTx = useMutation(api.etsyTransactions.update);
   const removeTx = useMutation(api.etsyTransactions.remove);
   const batchAddTx = useMutation(api.etsyTransactions.batchAdd);
+  const deleteAllTx = useMutation(api.etsyTransactions.deleteAll);
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ ...EMPTY_FORM, date: today() });
@@ -382,6 +383,8 @@ export default function EtsySales() {
   const [importRows, setImportRows] = useState<ParsedTx[] | null>(null);
   const [importSkipped, setImportSkipped] = useState(0);
   const [importing, setImporting] = useState(false);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const income = transactions.filter((t) => t.type === "income");
@@ -460,6 +463,13 @@ export default function EtsySales() {
     setImporting(false);
   };
 
+  const handleDeleteAll = async () => {
+    setDeletingAll(true);
+    await deleteAllTx({});
+    setConfirmDeleteAll(false);
+    setDeletingAll(false);
+  };
+
   return (
     <div className="etsy-wrap">
 
@@ -497,6 +507,9 @@ export default function EtsySales() {
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
+          <button className="etsy-add-btn etsy-danger-btn" onClick={() => setConfirmDeleteAll(true)}>
+            <Trash2 size={13} /> Delete All
+          </button>
           <button className="etsy-add-btn" onClick={() => fileInputRef.current?.click()}>
             <Upload size={13} /> Import CSV
           </button>
@@ -586,6 +599,28 @@ export default function EtsySales() {
         />
       )}
 
+      {/* ── Confirm Delete All ── */}
+      {confirmDeleteAll && (
+        <div className="modal-overlay" onClick={() => setConfirmDeleteAll(false)}>
+          <div className="etsy-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="etsy-modal-header">
+              <span>Delete All Transactions</span>
+              <button onClick={() => setConfirmDeleteAll(false)}><X size={16} /></button>
+            </div>
+            <div className="etsy-modal-body">
+              <p className="delete-confirm-text">
+                This will permanently delete all {transactions.length} transactions. This cannot be undone.
+              </p>
+            </div>
+            <div className="etsy-modal-footer">
+              <button className="etsy-save-btn etsy-save-danger" onClick={handleDeleteAll} disabled={deletingAll}>
+                <Trash2 size={13} /> {deletingAll ? "Deleting…" : `Delete all ${transactions.length} transactions`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .etsy-wrap { padding-bottom: 80px; }
 
@@ -651,6 +686,11 @@ export default function EtsySales() {
           transition: all 0.15s;
         }
         .etsy-add-btn:hover { border-color: var(--border-hover); color: var(--text-primary); background: #ffffff14; }
+        .etsy-danger-btn { color: #f8717188; border-color: #f8717133; }
+        .etsy-danger-btn:hover { color: #f87171; border-color: #f87171; background: #f8717110; }
+        .delete-confirm-text { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.6; }
+        .etsy-save-danger { border-color: #f87171; color: #f87171; background: #f8717110; }
+        .etsy-save-danger:hover { background: #f8717120; }
 
         /* ── Import Modal ── */
         .import-modal { max-width: 580px; }
