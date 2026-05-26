@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Providers from "./providers";
 import Reminders from "./components/Reminders";
 import PushManager from "./components/PushManager";
+import ScrollToTop from "./components/ScrollToTop";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <Reminders />
           <PushManager />
+          <ScrollToTop />
         </Providers>
       </body>
     </html>
