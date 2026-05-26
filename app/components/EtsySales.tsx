@@ -385,11 +385,18 @@ export default function EtsySales() {
   const [importing, setImporting] = useState(false);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [txSearch, setTxSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const income = transactions.filter((t) => t.type === "income");
-  const expenses = transactions.filter((t) => t.type === "expense");
-  const robert = transactions.filter((t) => t.type === "robert");
+  // ── Year tabs ──
+  const years = Array.from(new Set(transactions.map((t) => t.date.slice(0, 4)))).sort((a, b) => b.localeCompare(a));
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const activeYear = selectedYear ?? years[0] ?? null;
+  const yearTxs = activeYear ? transactions.filter((t) => t.date.startsWith(activeYear)) : transactions;
+
+  const income = yearTxs.filter((t) => t.type === "income");
+  const expenses = yearTxs.filter((t) => t.type === "expense");
+  const robert = yearTxs.filter((t) => t.type === "robert");
 
   const totalIncome = income.reduce((s, t) => s + t.amount, 0);
   const totalExpenses = expenses.reduce((s, t) => s + t.amount, 0);
@@ -398,6 +405,15 @@ export default function EtsySales() {
 
   const incomeMonths = computeMonthly(income);
   const robertMonths = computeMonthly(robert);
+
+  const q = txSearch.toLowerCase();
+  const visibleTxs = txSearch
+    ? yearTxs.filter((t) =>
+        (t.description ?? "").toLowerCase().includes(q) ||
+        t.type.includes(q) ||
+        t.amount.toString().includes(q)
+      )
+    : yearTxs;
 
   const handleAdd = async () => {
     if (!addForm.date || !addForm.amount) return;
@@ -454,7 +470,6 @@ export default function EtsySales() {
   const handleImportConfirm = async () => {
     if (!importRows || importRows.length === 0) return;
     setImporting(true);
-    // Convex mutations have a max arg size; batch in chunks of 100
     const chunkSize = 100;
     for (let i = 0; i < importRows.length; i += chunkSize) {
       await batchAddTx({ transactions: importRows.slice(i, i + chunkSize) });
@@ -472,6 +487,21 @@ export default function EtsySales() {
 
   return (
     <div className="etsy-wrap">
+
+      {/* ── Year Tabs ── */}
+      {years.length > 0 && (
+        <div className="year-tabs">
+          {years.map((y) => (
+            <button
+              key={y}
+              className={`year-tab ${(selectedYear ?? years[0]) === y ? "year-tab-active" : ""}`}
+              onClick={() => setSelectedYear(y)}
+            >
+              {y}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Summary ── */}
       <div className="etsy-summary">
@@ -537,11 +567,20 @@ export default function EtsySales() {
 
       {/* ── Transaction Log ── */}
       <section className="etsy-section">
-        <div className="etsy-section-header">
+        <div className="etsy-section-header etsy-section-header-row">
           <span className="etsy-section-title">All Transactions</span>
+          <input
+            className="tx-search"
+            type="text"
+            placeholder="Search…"
+            value={txSearch}
+            onChange={(e) => setTxSearch(e.target.value)}
+          />
         </div>
-        {transactions.length === 0 ? (
+        {yearTxs.length === 0 ? (
           <p className="etsy-empty">No transactions yet. Add your first one above.</p>
+        ) : visibleTxs.length === 0 ? (
+          <p className="etsy-empty">No transactions match "{txSearch}".</p>
         ) : (
           <div className="tx-table-wrap">
             <table className="etsy-table tx-table">
@@ -555,7 +594,7 @@ export default function EtsySales() {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((tx) => (
+                {visibleTxs.map((tx) => (
                   <TxRow key={tx._id} tx={tx} onEdit={openEdit} onDelete={(id) => removeTx({ id })} />
                 ))}
               </tbody>
@@ -623,6 +662,30 @@ export default function EtsySales() {
 
       <style>{`
         .etsy-wrap { padding-bottom: 80px; }
+
+        /* ── Year tabs ── */
+        .year-tabs {
+          display: flex;
+          gap: 0;
+          margin-bottom: 28px;
+          border-bottom: 1px solid var(--border);
+        }
+        .year-tab {
+          background: none;
+          border: none;
+          border-bottom: 2px solid transparent;
+          margin-bottom: -1px;
+          padding: 8px 20px;
+          font-family: inherit;
+          font-size: 11px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--text-muted);
+          cursor: pointer;
+          transition: color 0.15s, border-color 0.15s;
+        }
+        .year-tab:hover { color: var(--text-secondary); }
+        .year-tab-active { color: var(--text-primary); border-bottom-color: var(--text-primary); }
 
         /* ── Summary ── */
         .etsy-summary {
@@ -716,12 +779,33 @@ export default function EtsySales() {
           background: #ffffff03;
         }
         .etsy-section-robert .etsy-section-header { border-bottom-color: #a78bfa22; }
+        .etsy-section-header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
         .etsy-section-title {
           font-size: 9px;
           letter-spacing: 0.12em;
           text-transform: uppercase;
           color: var(--text-muted);
         }
+        .tx-search {
+          background: none;
+          border: 1px solid var(--border);
+          border-radius: 3px;
+          color: var(--text-primary);
+          font-family: inherit;
+          font-size: 11px;
+          padding: 4px 10px;
+          outline: none;
+          width: 160px;
+          transition: border-color 0.15s, width 0.2s;
+          color-scheme: dark;
+        }
+        .tx-search:focus { border-color: var(--border-hover); width: 220px; }
+        .tx-search::placeholder { color: var(--text-muted); }
         .robert-title { color: #a78bfa88; }
         .etsy-empty {
           font-size: 12px;
