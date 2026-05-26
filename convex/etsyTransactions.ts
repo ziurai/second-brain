@@ -40,3 +40,22 @@ export const remove = mutation({
     await ctx.db.delete(id);
   },
 });
+
+export const batchAdd = mutation({
+  args: {
+    transactions: v.array(
+      v.object({
+        type: v.union(v.literal("income"), v.literal("expense"), v.literal("robert")),
+        date: v.string(),
+        amount: v.number(),
+        description: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, { transactions }) => {
+    for (const tx of transactions) {
+      await ctx.db.insert("etsyTransactions", tx);
+    }
+    return transactions.length;
+  },
+});

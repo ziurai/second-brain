@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { Plus, X, Trash2, Pencil, Save } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Save, Upload } from "lucide-react";
 
 type TxType = "income" | "expense" | "robert";
 
@@ -56,6 +56,171 @@ function computeMonthly(txs: Transaction[]): MonthData[] {
 function formatDate(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
+}
+
+// ─── CSV parsing ─────────────────────────────────────────────────────────────
+
+const MONTH_MAP: Record<string, string> = {
+  jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+  jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+};
+
+function parseAmount(raw: string): number | null {
+  const cleaned = raw.replace(/[$,]/g, "").trim();
+  if (!cleaned) return null;
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? null : n;
+}
+
+function parseDate(raw: string): string | null {
+  // formats: "Oct. 28", "Jan.10", "Feb.18"
+  const match = raw.trim().match(/^([A-Za-z]+)\.?\s*(\d{1,2})$/);
+  if (!match) return null;
+  const monthKey = match[1].toLowerCase().slice(0, 3);
+  const mm = MONTH_MAP[monthKey];
+  if (!mm) return null;
+  const day = match[2].padStart(2, "0");
+  // Oct/Nov/Dec → 2025, Jan onward → 2026
+  const year = ["10", "11", "12"].includes(mm) ? "2025" : "2026";
+  return `${year}-${mm}-${day}`;
+}
+
+interface ParsedTx {
+  type: TxType;
+  date: string;
+  amount: number;
+  description?: string;
+}
+
+function parseCSV(text: string): { rows: ParsedTx[]; skipped: number } {
+  const lines = text.split(/\r?\n/);
+  const rows: ParsedTx[] = [];
+  let skipped = 0;
+
+  for (const line of lines) {
+    const cols = line.split(",");
+    if (cols.length < 4) { skipped++; continue; }
+
+    const category = cols[0].trim();
+    const dateRaw = cols[1].trim();
+    const expenseRaw = cols[2].trim();
+    const incomeRaw = cols[3].trim();
+
+    // skip header, empty, totals
+    if (!category || category.toLowerCase() === "category") { skipped++; continue; }
+    if (!dateRaw || dateRaw.match(/^\d{3,}$/) || category.match(/^\d/)) { skipped++; continue; }
+
+    const date = parseDate(dateRaw);
+    if (!date) { skipped++; continue; }
+
+    const isRobert = category.toUpperCase().startsWith("ROBERT");
+
+    if (isRobert) {
+      // Robert rows: income col = positive robert, expense col = also stored as positive (separate tracking)
+      const incomeAmt = parseAmount(incomeRaw);
+      const expenseAmt = parseAmount(expenseRaw);
+      if (incomeAmt !== null && incomeAmt > 0) {
+        rows.push({ type: "robert", date, amount: incomeAmt, description: "Robert income" });
+      } else if (expenseAmt !== null && expenseAmt > 0) {
+        rows.push({ type: "robert", date, amount: expenseAmt, description: "Robert expense" });
+      } else {
+        skipped++;
+      }
+      continue;
+    }
+
+    const incomeAmt = parseAmount(incomeRaw);
+    const expenseAmt = parseAmount(expenseRaw);
+
+    if (incomeAmt !== null && incomeAmt > 0) {
+      rows.push({ type: "income", date, amount: incomeAmt, description: category !== "3D Etsy Sale" ? category : undefined });
+    } else if (expenseAmt !== null && expenseAmt > 0) {
+      rows.push({ type: "expense", date, amount: expenseAmt, description: category });
+    } else {
+      skipped++;
+    }
+  }
+
+  return { rows, skipped };
+}
+
+// ─── CSV Import Modal ─────────────────────────────────────────────────────────
+
+function ImportModal({
+  rows,
+  skipped,
+  onConfirm,
+  onClose,
+  loading,
+}: {
+  rows: ParsedTx[];
+  skipped: number;
+  onConfirm: () => void;
+  onClose: () => void;
+  loading: boolean;
+}) {
+  const incomeCount = rows.filter((r) => r.type === "income").length;
+  const expenseCount = rows.filter((r) => r.type === "expense").length;
+  const robertCount = rows.filter((r) => r.type === "robert").length;
+  const preview = rows.slice(0, 8);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="etsy-modal import-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="etsy-modal-header">
+          <span>Import CSV — Preview</span>
+          <button onClick={onClose}><X size={16} /></button>
+        </div>
+        <div className="etsy-modal-body">
+          <div className="import-counts">
+            <span className="import-count income-val">{incomeCount} income</span>
+            <span className="import-count expense-val">{expenseCount} expenses</span>
+            <span className="import-count robert-val">{robertCount} robert</span>
+            {skipped > 0 && <span className="import-count skip-val">{skipped} skipped</span>}
+          </div>
+          <div className="import-preview-wrap">
+            <table className="etsy-table import-preview-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th className="num">Amount</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ color: "var(--text-secondary)", whiteSpace: "nowrap" }}>{r.date}</td>
+                    <td>
+                      <span className="tx-badge" style={{
+                        color: r.type === "income" ? "#6ee7b7" : r.type === "robert" ? "#a78bfa" : "#f87171",
+                        borderColor: (r.type === "income" ? "#6ee7b7" : r.type === "robert" ? "#a78bfa" : "#f87171") + "44",
+                      }}>
+                        {r.type}
+                      </span>
+                    </td>
+                    <td className="num" style={{ color: r.type === "expense" ? "#f87171" : r.type === "robert" ? "#a78bfa" : "#6ee7b7" }}>
+                      {usd(r.amount)}
+                    </td>
+                    <td style={{ color: "var(--text-secondary)" }}>{r.description ?? <span style={{ color: "var(--text-muted)" }}>—</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {rows.length > 8 && (
+              <p className="import-more">…and {rows.length - 8} more rows</p>
+            )}
+          </div>
+        </div>
+        <div className="etsy-modal-footer">
+          <button className="etsy-save-btn" onClick={onConfirm} disabled={loading || rows.length === 0}>
+            <Upload size={13} /> {loading ? "Importing…" : `Import ${rows.length} transactions`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Module-level subcomponents ──────────────────────────────────────────────
@@ -207,12 +372,17 @@ export default function EtsySales() {
   const addTx = useMutation(api.etsyTransactions.add);
   const updateTx = useMutation(api.etsyTransactions.update);
   const removeTx = useMutation(api.etsyTransactions.remove);
+  const batchAddTx = useMutation(api.etsyTransactions.batchAdd);
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ ...EMPTY_FORM, date: today() });
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [editForm, setEditForm] = useState({ ...EMPTY_FORM });
   const [loading, setLoading] = useState(false);
+  const [importRows, setImportRows] = useState<ParsedTx[] | null>(null);
+  const [importSkipped, setImportSkipped] = useState(0);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const income = transactions.filter((t) => t.type === "income");
   const expenses = transactions.filter((t) => t.type === "expense");
@@ -264,6 +434,32 @@ export default function EtsySales() {
     setLoading(false);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const { rows, skipped } = parseCSV(text);
+      setImportRows(rows);
+      setImportSkipped(skipped);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const handleImportConfirm = async () => {
+    if (!importRows || importRows.length === 0) return;
+    setImporting(true);
+    // Convex mutations have a max arg size; batch in chunks of 100
+    const chunkSize = 100;
+    for (let i = 0; i < importRows.length; i += chunkSize) {
+      await batchAddTx({ transactions: importRows.slice(i, i + chunkSize) });
+    }
+    setImportRows(null);
+    setImporting(false);
+  };
+
   return (
     <div className="etsy-wrap">
 
@@ -293,9 +489,21 @@ export default function EtsySales() {
       {/* ── Actions ── */}
       <div className="etsy-toolbar">
         <span className="etsy-section-label">Transactions</span>
-        <button className="etsy-add-btn" onClick={() => setShowAdd(true)}>
-          <Plus size={13} /> Add
-        </button>
+        <div className="etsy-toolbar-btns">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            style={{ display: "none" }}
+            onChange={handleFileChange}
+          />
+          <button className="etsy-add-btn" onClick={() => fileInputRef.current?.click()}>
+            <Upload size={13} /> Import CSV
+          </button>
+          <button className="etsy-add-btn" onClick={() => setShowAdd(true)}>
+            <Plus size={13} /> Add
+          </button>
+        </div>
       </div>
 
       {/* ── Monthly Breakdown — Income ── */}
@@ -367,6 +575,17 @@ export default function EtsySales() {
         />
       )}
 
+      {/* ── Import Preview Modal ── */}
+      {importRows && (
+        <ImportModal
+          rows={importRows}
+          skipped={importSkipped}
+          onConfirm={handleImportConfirm}
+          onClose={() => setImportRows(null)}
+          loading={importing}
+        />
+      )}
+
       <style>{`
         .etsy-wrap { padding-bottom: 80px; }
 
@@ -408,6 +627,7 @@ export default function EtsySales() {
           justify-content: space-between;
           margin-bottom: 24px;
         }
+        .etsy-toolbar-btns { display: flex; gap: 8px; }
         .etsy-section-label {
           font-size: 9px;
           letter-spacing: 0.12em;
@@ -431,6 +651,15 @@ export default function EtsySales() {
           transition: all 0.15s;
         }
         .etsy-add-btn:hover { border-color: var(--border-hover); color: var(--text-primary); background: #ffffff14; }
+
+        /* ── Import Modal ── */
+        .import-modal { max-width: 580px; }
+        .import-counts { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+        .import-count { font-size: 11px; letter-spacing: 0.06em; }
+        .skip-val { color: var(--text-muted); }
+        .import-preview-wrap { max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; }
+        .import-preview-table { min-width: 400px; }
+        .import-more { font-size: 11px; color: var(--text-muted); padding: 8px 14px; margin: 0; border-top: 1px solid var(--border); }
 
         /* ── Sections ── */
         .etsy-section {
