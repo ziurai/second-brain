@@ -13,7 +13,7 @@ export default function Home() {
       <style>{`
         .main {
           min-height: 100vh;
-          max-width: 1100px;
+          max-width: 1200px;
           margin: 0 auto;
           padding: 0 32px;
         }
