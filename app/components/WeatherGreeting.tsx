@@ -20,9 +20,9 @@ export default function WeatherGreeting() {
     fetch("/api/weather")
       .then((r) => r.json())
       .then((data) => {
-        setTemp(data.temp);
-        setHigh(data.high);
-        setLow(data.low);
+        if (typeof data.temp === "number") setTemp(data.temp);
+        if (typeof data.high === "number") setHigh(data.high);
+        if (typeof data.low === "number") setLow(data.low);
       })
       .catch(() => {});
   }, []);
