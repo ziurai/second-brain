@@ -537,9 +537,6 @@ export default function EtsySales() {
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
-          <button className="etsy-add-btn etsy-danger-btn" onClick={() => setConfirmDeleteAll(true)}>
-            <Trash2 size={13} /> Delete All
-          </button>
           <button className="etsy-add-btn" onClick={() => fileInputRef.current?.click()}>
             <Upload size={13} /> Import CSV
           </button>
@@ -602,6 +599,13 @@ export default function EtsySales() {
           </div>
         )}
       </section>
+
+      {/* ── Danger Zone ── */}
+      <div className="danger-zone">
+        <button className="etsy-add-btn etsy-danger-btn" onClick={() => setConfirmDeleteAll(true)}>
+          <Trash2 size={13} /> Delete All Transactions
+        </button>
+      </div>
 
       {/* ── Add Modal ── */}
       {showAdd && (
@@ -751,6 +755,7 @@ export default function EtsySales() {
         .etsy-add-btn:hover { border-color: var(--border-hover); color: var(--text-primary); background: #ffffff14; }
         .etsy-danger-btn { color: #f8717188; border-color: #f8717133; }
         .etsy-danger-btn:hover { color: #f87171; border-color: #f87171; background: #f8717110; }
+        .danger-zone { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
         .delete-confirm-text { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.6; }
         .etsy-save-danger { border-color: #f87171; color: #f87171; background: #f8717110; }
         .etsy-save-danger:hover { background: #f8717120; }

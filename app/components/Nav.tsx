@@ -11,9 +11,9 @@ export default function Nav() {
 
   const TABS: { label: string; href: string; badge: number }[] = [
     { label: "Brain", href: "/", badge: 0 },
-    { label: "Print", href: "/print", badge: 0 },
     { label: "Calendar", href: "/calendar", badge: todayCount },
     { label: "Etsy", href: "/etsy", badge: 0 },
+    { label: "Print", href: "/print", badge: 0 },
   ];
 
   return (
