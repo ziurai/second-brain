@@ -67,4 +67,10 @@ export default defineSchema({
     p256dh: v.string(),
     auth: v.string(),
   }).index("by_endpoint", ["endpoint"]),
+  etsyTransactions: defineTable({
+    type: v.union(v.literal("income"), v.literal("expense"), v.literal("robert")),
+    date: v.string(),
+    amount: v.number(),
+    description: v.optional(v.string()),
+  }),
 });
