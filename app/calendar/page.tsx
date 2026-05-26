@@ -1,17 +1,11 @@
 import Nav from "../components/Nav";
 import CalendarView from "../components/CalendarView";
-import Clock from "../components/Clock";
+import PageHeader from "../components/PageHeader";
 
 export default function CalendarPage() {
   return (
     <main className="main">
-      <header className="header">
-        <div className="greeting-block">
-          <h1 className="greeting">Calendar</h1>
-          <Clock />
-        </div>
-        <div className="header-rule" />
-      </header>
+      <PageHeader title="Calendar" />
       <Nav />
       <CalendarView />
       <style>{`
@@ -21,33 +15,8 @@ export default function CalendarPage() {
           margin: 0 auto;
           padding: 0 32px;
         }
-        .header { padding-top: 56px; padding-bottom: 40px; }
-        .greeting-block {
-          display: flex;
-          align-items: baseline;
-          justify-content: space-between;
-          gap: 24px;
-          flex-wrap: wrap;
-        }
-        .greeting {
-          font-size: clamp(28px, 5vw, 48px);
-          font-weight: 300;
-          letter-spacing: -0.03em;
-          color: var(--text-primary);
-        }
-        .clock-block { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-        .clock-time {
-          font-size: 22px;
-          font-weight: 300;
-          color: var(--text-primary);
-          letter-spacing: -0.02em;
-          font-variant-numeric: tabular-nums;
-        }
-        .header-rule {
-          width: 100%;
-          height: 1px;
-          background: var(--border);
-          margin-top: 32px;
+        @media (max-width: 640px) {
+          .main { padding: 0 16px !important; }
         }
       `}</style>
     </main>
