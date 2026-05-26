@@ -106,9 +106,9 @@ function parseCSV(text: string): { rows: ParsedTx[]; skipped: number } {
     const expenseRaw = cols[2].trim();
     const incomeRaw = cols[3].trim();
 
-    // skip header, empty, totals
+    // skip header and empty rows
     if (!category || category.toLowerCase() === "category") { skipped++; continue; }
-    if (!dateRaw || dateRaw.match(/^\d{3,}$/) || category.match(/^\d/)) { skipped++; continue; }
+    if (!dateRaw) { skipped++; continue; }
 
     const date = parseDate(dateRaw);
     if (!date) { skipped++; continue; }
