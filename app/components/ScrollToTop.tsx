@@ -23,7 +23,7 @@ export default function ScrollToTop() {
       <style>{`
         .scroll-top-btn {
           position: fixed !important;
-          bottom: 32px !important;
+          bottom: 84px !important;
           right: 32px !important;
           width: 40px !important;
           height: 40px !important;
@@ -52,7 +52,7 @@ export default function ScrollToTop() {
           transform: translateY(0);
         }
         @media (max-width: 640px) {
-          .scroll-top-btn { bottom: 20px !important; right: 20px !important; }
+          .scroll-top-btn { bottom: 72px !important; right: 20px !important; }
         }
       `}</style>
     </>
