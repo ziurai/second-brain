@@ -1,18 +1,35 @@
 import { NextResponse } from "next/server";
 
+// Hardcoded NWS gridpoint for Grand Rapids, MI (GRR office, grid 58,33)
+const FORECAST_URL = "https://api.weather.gov/gridpoints/GRR/58,33/forecast";
+const HOURLY_URL = "https://api.weather.gov/gridpoints/GRR/58,33/forecast/hourly";
+const NWS_HEADERS = { "User-Agent": "second-brain-app/1.0" };
+
 export async function GET() {
   try {
-    const res = await fetch(
-      "https://api.open-meteo.com/v1/forecast?latitude=42.9634&longitude=-85.6681&current=temperature_2m&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FDetroit",
-      { next: { revalidate: 900 } }
-    );
-    const data = await res.json();
+    const [forecastRes, hourlyRes] = await Promise.all([
+      fetch(FORECAST_URL, { headers: NWS_HEADERS, cache: "no-store" }),
+      fetch(HOURLY_URL, { headers: NWS_HEADERS, cache: "no-store" }),
+    ]);
+
+    if (!forecastRes.ok || !hourlyRes.ok) {
+      return NextResponse.json({ error: "unavailable" }, { status: 502 });
+    }
+
+    const [forecast, hourly] = await Promise.all([forecastRes.json(), hourlyRes.json()]);
+
+    const periods: { temperature: number; isDaytime: boolean }[] = forecast.properties.periods;
+    const temp: number = hourly.properties.periods[0].temperature;
+    const dayPeriod = periods.find((p) => p.isDaytime);
+    const nightPeriod = periods.find((p) => !p.isDaytime);
+
     return NextResponse.json({
-      temp: Math.round(data.current.temperature_2m),
-      high: Math.round(data.daily.temperature_2m_max[0]),
-      low: Math.round(data.daily.temperature_2m_min[0]),
+      temp,
+      high: dayPeriod?.temperature ?? null,
+      low: nightPeriod?.temperature ?? null,
     });
-  } catch {
+  } catch (e) {
+    console.error("weather fetch error:", e);
     return NextResponse.json({ error: "unavailable" }, { status: 502 });
   }
 }
