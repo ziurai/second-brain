@@ -517,12 +517,14 @@ export default function EtsySales() {
           <div className="summary-card">
             <div className="summary-label">Net</div>
             <div className={`summary-value ${net >= 0 ? "income-val" : "expense-val"}`}>{usd(net)}</div>
+            {net > 0 && <div className="tax-hint">save {usd(net * 0.4)} for taxes</div>}
           </div>
         </div>
         <div className="summary-divider" />
         <div className="summary-card robert-card">
           <div className="summary-label robert-label">Robert</div>
           <div className="summary-value robert-val">{usd(totalRobert)}</div>
+          {totalRobert > 0 && <div className="tax-hint">{usd(totalRobert * 0.4)} for taxes</div>}
         </div>
       </div>
 
@@ -721,6 +723,7 @@ export default function EtsySales() {
         .income-val { color: #6ee7b7; }
         .expense-val { color: #f87171; }
         .robert-val { color: #a78bfa; }
+        .tax-hint { font-size: 11px; color: #f87171; opacity: 0.7; margin-top: 5px; letter-spacing: 0; }
 
         /* ── Toolbar ── */
         .etsy-toolbar {
