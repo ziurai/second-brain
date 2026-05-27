@@ -517,7 +517,7 @@ export default function EtsySales() {
           <div className="summary-card">
             <div className="summary-label">Net</div>
             <div className={`summary-value ${net >= 0 ? "income-val" : "expense-val"}`}>{usd(net)}</div>
-            {net > 0 && <div className="tax-hint">save {usd(net * 0.4)} for taxes</div>}
+            {net > 0 && <div className="tax-hint">{usd(net * 0.4)}</div>}
           </div>
         </div>
         <div className="summary-divider" />
