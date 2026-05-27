@@ -524,7 +524,7 @@ export default function EtsySales() {
         <div className="summary-card robert-card">
           <div className="summary-label robert-label">Robert</div>
           <div className="summary-value robert-val">{usd(totalRobert)}</div>
-          {totalRobert > 0 && <div className="tax-hint">{usd(totalRobert * 0.4)} for taxes</div>}
+          {totalRobert > 0 && <div className="tax-hint">{usd(totalRobert * 0.4)}</div>}
         </div>
       </div>
 
