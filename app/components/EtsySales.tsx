@@ -38,17 +38,22 @@ function computeMonthly(txs: Transaction[]): MonthData[] {
     map[key].sales++;
     map[key].total += t.amount;
   }
+  const now = new Date();
+  const currentKey = now.toLocaleDateString("en-CA").slice(0, 7);
+  const currentDay = now.getDate();
+
   return Object.entries(map)
     .sort(([a], [b]) => b.localeCompare(a))
     .map(([key, d]) => {
       const [y, m] = key.split("-").map(Number);
       const daysInMonth = new Date(y, m, 0).getDate();
+      const divisor = key === currentKey ? currentDay : daysInMonth;
       return {
         key,
         label: new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" }),
         sales: d.sales,
         total: d.total,
-        daysInMonth,
+        daysInMonth: divisor,
       };
     });
 }
