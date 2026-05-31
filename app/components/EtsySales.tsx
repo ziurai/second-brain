@@ -561,14 +561,6 @@ export default function EtsySales() {
         <MonthTable months={incomeMonths} color="#6ee7b7" />
       </section>
 
-      {/* ── Monthly Breakdown — Robert ── */}
-      <section className="etsy-section etsy-section-robert">
-        <div className="etsy-section-header">
-          <span className="etsy-section-title robert-title">Monthly — Robert</span>
-        </div>
-        <MonthTable months={robertMonths} color="#a78bfa" />
-      </section>
-
       {/* ── Transaction Log ── */}
       <section className="etsy-section">
         <div className="etsy-section-header etsy-section-header-row">
