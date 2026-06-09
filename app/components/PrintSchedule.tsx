@@ -114,6 +114,16 @@ export default function PrintSchedule() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copiedDate, setCopiedDate] = useState<string | null>(null);
+  const [sortByShipBy, setSortByShipBy] = useState(false);
+
+  const displayJobs = sortByShipBy
+    ? [...jobs].sort((a, b) => {
+        if (!a.shipBy && !b.shipBy) return 0;
+        if (!a.shipBy) return 1;
+        if (!b.shipBy) return -1;
+        return a.shipBy.localeCompare(b.shipBy);
+      })
+    : jobs;
 
   const update = (id: Id<"printJobs">, fields: Partial<Omit<Job, "_id" | "order">>) => {
     updateJob({ id, ...fields });
@@ -168,12 +178,14 @@ export default function PrintSchedule() {
               <th className="col-customer">Customer</th>
               <th className="col-date">Produce</th>
               <th className="col-date">Ship Date</th>
-              <th className="col-date">Ship By</th>
+              <th className="col-date col-sortable" onClick={() => setSortByShipBy((s) => !s)}>
+                Ship By {sortByShipBy ? "↑" : <span className="sort-hint">↕</span>}
+              </th>
               <th className="col-del" />
             </tr>
           </thead>
           <tbody>
-            {jobs.map((job) => (
+            {displayJobs.map((job) => (
               <tr
                 key={job._id}
                 className={`print-row${selected.has(job._id) ? " row-selected" : ""}`}
@@ -306,6 +318,9 @@ export default function PrintSchedule() {
         .col-product { width: 200px; }
         .col-customer { width: 180px; }
         .col-date { width: 140px; }
+        .col-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        .col-sortable:hover { color: var(--text-secondary); }
+        .sort-hint { opacity: 0.3; }
         .col-del { width: 36px; }
 
         .row-check {
